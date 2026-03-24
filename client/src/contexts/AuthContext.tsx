@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo } 
 import type { ReactNode } from "react";
 import { jwtDecode } from "jwt-decode";
 import { AUTH_KEY } from "@/utils/constants";
+import api, { isAxiosError } from "@/utils/api";
 
 export interface User {
   id: string;
@@ -14,6 +15,11 @@ export interface User {
   token: string;
 }
 
+export interface LoginCredentials {
+  username: string;
+  password: string;
+}
+
 interface JwtPayload {
   role: 'admin' | 'landlord' | 'tenant';
   exp: number;
@@ -22,7 +28,7 @@ interface JwtPayload {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (userData: User) => void;
+  login: (credentials: LoginCredentials) => Promise<boolean>;
   logout: () => void;
 }
 
@@ -39,7 +45,7 @@ function getRoleFromToken(token: string): 'admin' | 'landlord' | 'tenant' | null
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
-  login: () => {},
+  login: async () => false,
   logout: () => {},
 });
 
@@ -81,19 +87,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const login = useCallback((userData: User) => {
-    const role = getRoleFromToken(userData.token);
-    if (!role) return;
-    
-    const safeUser = { ...userData, role };
-    setUser(safeUser);
-    localStorage.setItem(AUTH_KEY, JSON.stringify(safeUser));
-  }, []);
-
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem(AUTH_KEY);
   }, []);
+
+  const login = useCallback(async (credentials: LoginCredentials) => {
+    try {
+      const res = await api.post('/auth/login', credentials);
+      const token = res?.data?.token as string | undefined;
+      const apiUser = res?.data?.user as Omit<User, 'token'> | undefined;
+
+      if (!token || !apiUser) return false;
+
+      const role = getRoleFromToken(token);
+      if (!role) {
+        logout();
+        return false;
+      }
+
+      const safeUser: User = { ...apiUser, token, role };
+      setUser(safeUser);
+      localStorage.setItem(AUTH_KEY, JSON.stringify(safeUser));
+      return true;
+    } catch (error) {
+      if (isAxiosError(error) && error.response) {
+        // Sai credentials / dữ liệu thiếu: trả về false để UI hiển thị "Sai tài khoản/mật khẩu"
+        if (error.response.status === 400 || error.response.status === 401) {
+          return false;
+        }
+      }
+      // Lỗi mạng/500: để UI bắt và hiển thị thông báo lỗi kết nối
+      throw error;
+    }
+  }, [logout]);
 
   const memoizedValue = useMemo(() => ({
     user,

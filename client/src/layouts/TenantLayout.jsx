@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
+// eslint-disable-next-line no-unused-vars
 import { motion } from 'framer-motion';
 import { Dropdown, Avatar, Space } from "antd";
 import { 
@@ -11,6 +12,7 @@ import {
   HeartOutlined 
 } from '@ant-design/icons';
 import { useAuth } from "@/contexts/AuthContext";
+import AppButton from '@/components/ui/AppButton';
 
 export default function TenantLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -61,12 +63,12 @@ export default function TenantLayout() {
               </Dropdown>
             ) : (
               <>
-                <button onClick={() => navigate('/login')} className="text-sm font-medium text-slate-600 hover:text-emerald-600 transition-colors">
+                <AppButton variant="text" onClick={() => navigate('/login')}>
                   Đăng nhập
-                </button>
-                <button onClick={() => navigate('/register')} className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all shadow-sm">
+                </AppButton>
+                <AppButton variant="primary" onClick={() => navigate('/register')}>
                   Đăng tin miễn phí
-                </button>
+                </AppButton>
               </>
             )}
           </div>
@@ -97,8 +99,26 @@ export default function TenantLayout() {
                 </>
               ) : (
                 <>
-                  <button onClick={() => { navigate('/login'); setIsMobileMenuOpen(false); }} className="w-full text-center text-base font-medium text-slate-600 py-2">Đăng nhập</button>
-                  <button onClick={() => { navigate('/register'); setIsMobileMenuOpen(false); }} className="w-full bg-emerald-600 text-white px-5 py-3 rounded-xl text-base font-medium">Đăng tin miễn phí</button>
+                  <AppButton
+                    variant="text"
+                    onClick={() => {
+                      navigate('/login');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full text-center text-base py-2"
+                  >
+                    Đăng nhập
+                  </AppButton>
+                  <AppButton
+                    variant="primary"
+                    onClick={() => {
+                      navigate('/register');
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full px-5 py-3 text-base"
+                  >
+                    Đăng tin miễn phí
+                  </AppButton>
                 </>
               )}
             </div>

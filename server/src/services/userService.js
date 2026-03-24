@@ -1,0 +1,109 @@
+const User = require('../models/User');
+const bcrypt = require('bcryptjs');
+const { v4: uuidv4 } = require('uuid');
+
+const getAllUsers = async ({ page = 1, limit = 10, search = '', role = '' } = {}) => {
+  const { Op } = require('sequelize');
+  const offset = (page - 1) * limit;
+
+  const where = { deleted_at: null };
+  if (role) where.role = role;
+  if (search) {
+    where[Op.or] = [
+      { username: { [Op.like]: `%${search}%` } },
+      { fullname: { [Op.like]: `%${search}%` } },
+      { email: { [Op.like]: `%${search}%` } },
+    ];
+  }
+
+  const { count, rows } = await User.findAndCountAll({
+    where,
+    limit: Number(limit),
+    offset: Number(offset),
+    order: [['created_at', 'DESC']],
+  });
+
+  return {
+    total: count,
+    page: Number(page),
+    limit: Number(limit),
+    totalPages: Math.ceil(count / limit),
+    data: rows.map(user => {
+      const { password, ...rest } = user.toJSON();
+      return rest;
+    }),
+  };
+};
+
+const findUserByEmail = async (email) => {
+  const user = await User.findOne({ where: { email } });
+  if (!user) return null;
+  const { password, ...rest } = user.toJSON();
+  return rest;
+};
+
+const createUser = async (data) => {
+  // Xử lý dữ liệu đầu vào, mã hóa password
+  if (data.password) {
+    data.password = await bcrypt.hash(data.password, 10);
+  }
+  // Tạo id v4 nếu chưa có
+  if (!data.id) {
+    data.id = uuidv4();
+  }
+  const user = await User.create(data);
+  const { password, ...rest } = user.toJSON();
+  return rest;
+};
+
+const updateUser = async (id, data) => {
+  // Nếu có password mới thì mã hóa
+  if (data.password) {
+    data.password = await bcrypt.hash(data.password, 10);
+  }
+  await User.update(data, { where: { id } });
+  const user = await User.findByPk(id);
+  if (!user) return null;
+  const { password, ...rest } = user.toJSON();
+  return rest;
+};
+
+const deleteUser = async (id) => {
+  const user = await User.findOne({ where: { id, deleted_at: null } });
+  if (!user) return null;
+  await User.update({ deleted_at: new Date() }, { where: { id } });
+  const { password, ...rest } = user.toJSON();
+  return rest;
+};
+
+const loginUser = async (username, password) => {
+  const user = await User.findOne({ where: { username } });
+  if (!user) return null;
+  const isValid = await bcrypt.compare(password, user.password);
+  if (!isValid) return null;
+  const { password: _, ...rest } = user.toJSON();
+  return rest;
+};
+
+const checkDuplicateUsername = async (username) => {
+  const user = await User.findOne({ where: { username } });
+  return !!user;
+};
+
+const getUserById = async (id) => {
+  const user = await User.findOne({ where: { id, deleted_at: null } });
+  if (!user) return null;
+  const { password, ...rest } = user.toJSON();
+  return rest;
+};
+
+module.exports = {
+  getAllUsers,
+  findUserByEmail,
+  createUser,
+  updateUser,
+  deleteUser,
+  loginUser,
+  checkDuplicateUsername,
+  getUserById,
+};
