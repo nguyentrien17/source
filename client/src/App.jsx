@@ -13,6 +13,10 @@ import Login from "@/pages/login";
 import TenantLayout from "@/layouts/TenantLayout";
 import Home from "@/pages/tenant/Home";
 
+//admin
+import AdminLayout from "@/layouts/AdminLayout";
+import AdminDashboard from "@/pages/admin/Dashboard";
+
 export default function App() {
   return (
     <ConfigProvider locale={viVN}>
@@ -26,6 +30,10 @@ export default function App() {
               <Route element={<ProtectedRoute allowedRoles={['tenant']} />} >
                 {/* Các route cần bảo vệ sẽ được đặt ở đây */}
               </Route>
+            </Route>
+            <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>} >
+              <Route index element={<AdminDashboard />} />
+              {/* Các route admin khác sẽ được đặt ở đây */}
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

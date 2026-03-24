@@ -26,10 +26,10 @@ export default function FeaturedRoomCard({ room, onClick }) {
             <SafetyCertificateFilled className="mr-1.5 text-sm" /> Đã xác thực
           </div>
         )}
-        <button className="absolute top-4 right-4 p-2.5 bg-white/90 backdrop-blur-sm rounded-full text-slate-400 hover:text-red-500 hover:bg-white transition-colors shadow-sm">
+        <button className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-white/90 backdrop-blur-sm rounded-full text-slate-400 hover:text-red-500 hover:bg-white transition-all shadow-sm">
           {room.isFavorite ? <HeartFilled className="text-red-500 text-lg" /> : <HeartOutlined className="text-lg" />}
         </button>
-        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm border border-white/20">
+        <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-md px-4 py-1 rounded-2xl shadow-sm border border-white/20">
           <span className="text-emerald-600 font-black text-xl">{room.price}</span>
           <span className="text-slate-600 text-sm font-medium ml-1">{room.unit}</span>
         </div>
