@@ -4,3 +4,44 @@
   .scrollbar-hide::-webkit-scrollbar { display: none; }
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 }
+
+/* 1. Ép thanh phân trang trải dài 100% */
+.custom-flat-pagination {
+  display: flex !important;
+  align-items: center;
+}
+
+/* 2. BẮT BUỘC: Đẩy phần Text "Hiển thị..." sang sát lề trái */
+.custom-flat-pagination .ant-pagination-total-text {
+  margin-right: auto !important; /* Lực đẩy các số trang về bên phải */
+  color: #64748b; /* text-slate-500 */
+  padding-left: 15px;
+}
+
+/* 3. XÓA BỎ MỌI ĐƯỜNG VIỀN & NỀN MẶC ĐỊNH CỦA ANTD */
+.custom-flat-pagination .ant-pagination-item,
+.custom-flat-pagination .ant-pagination-prev,
+.custom-flat-pagination .ant-pagination-next,
+.custom-flat-pagination .ant-pagination-item-link,
+.custom-flat-pagination .ant-pagination-item-link button {
+  border: none !important;
+  background: transparent !important;
+}
+
+/* 4. Làm nổi bật số trang hiện tại (Màu Emerald của dự án) */
+.custom-flat-pagination .ant-pagination-item-active a {
+  color: #10b981 !important; /* Emerald 500 */
+  font-weight: 700 !important;
+}
+
+/* 5. Màu cho các trang chưa chọn */
+.custom-flat-pagination .ant-pagination-item:not(.ant-pagination-item-active) a {
+  color: #94a3b8 !important; /* Slate 400 */
+}
+
+/* 6. Hiệu ứng Hover khi di chuột vào số trang / nút điều hướng */
+.custom-flat-pagination .ant-pagination-item a:hover,
+.custom-flat-pagination .ant-pagination-prev:hover .ant-pagination-item-link,
+.custom-flat-pagination .ant-pagination-next:hover .ant-pagination-item-link {
+  color: #059669 !important; /* Emerald 600 */
+}

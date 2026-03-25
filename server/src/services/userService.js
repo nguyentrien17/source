@@ -1,9 +1,14 @@
-const User = require('../models/User');
-const bcrypt = require('bcryptjs');
-const { v4: uuidv4 } = require('uuid');
+const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+const { v4: uuidv4 } = require("uuid");
 
-const getAllUsers = async ({ page = 1, limit = 10, search = '', role = '' } = {}) => {
-  const { Op } = require('sequelize');
+const getAllUsers = async ({
+  page = 1,
+  limit = 10,
+  search = "",
+  role = "",
+} = {}) => {
+  const { Op } = require("sequelize");
   const offset = (page - 1) * limit;
 
   const where = { deleted_at: null };
@@ -20,7 +25,7 @@ const getAllUsers = async ({ page = 1, limit = 10, search = '', role = '' } = {}
     where,
     limit: Number(limit),
     offset: Number(offset),
-    order: [['created_at', 'DESC']],
+    order: [["created_at", "DESC"]],
   });
 
   return {
@@ -28,7 +33,7 @@ const getAllUsers = async ({ page = 1, limit = 10, search = '', role = '' } = {}
     page: Number(page),
     limit: Number(limit),
     totalPages: Math.ceil(count / limit),
-    data: rows.map(user => {
+    data: rows.map((user) => {
       const { password, ...rest } = user.toJSON();
       return rest;
     }),
@@ -43,28 +48,29 @@ const findUserByEmail = async (email) => {
 };
 
 const createUser = async (data) => {
-  // Xử lý dữ liệu đầu vào, mã hóa password
-  if (data.password) {
-    data.password = await bcrypt.hash(data.password, 10);
-  }
-  // Tạo id v4 nếu chưa có
-  if (!data.id) {
-    data.id = uuidv4();
-  }
+  // Kiểm tra trùng Email/Username
+  const existing = await User.findOne({
+    where: { [Op.or]: [{ username: data.username }] },
+  });
+  if (existing) throw new Error("Username đã được sử dụng");
+
+  if (data.password) data.password = await bcrypt.hash(data.password, 10);
+  data.id = data.id || uuidv4();
+
   const user = await User.create(data);
   const { password, ...rest } = user.toJSON();
   return rest;
 };
 
 const updateUser = async (id, data) => {
-  // Nếu có password mới thì mã hóa
-  if (data.password) {
-    data.password = await bcrypt.hash(data.password, 10);
-  }
-  await User.update(data, { where: { id } });
   const user = await User.findByPk(id);
   if (!user) return null;
-  const { password, ...rest } = user.toJSON();
+
+  if (data.password) data.password = await bcrypt.hash(data.password, 10);
+
+  await User.update(data, { where: { id } });
+  const updated = await User.findByPk(id);
+  const { password: _, ...rest } = updated.toJSON();
   return rest;
 };
 

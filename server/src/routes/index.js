@@ -3,6 +3,6 @@ const router = express.Router();
 
 const provinceController = require('../controllers/provinceController');
 
-router.get('/province', provinceController.getProvinces);
+router.get('/provinces', provinceController.getProvinces);
 
 module.exports = router;

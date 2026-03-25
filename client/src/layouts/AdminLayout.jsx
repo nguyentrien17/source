@@ -26,7 +26,7 @@ export default function AdminLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate('/'); // Đăng xuất xong văng về trang chủ người thuê
+    setTimeout(() => navigate('/'), 0);
   };
 
   return (

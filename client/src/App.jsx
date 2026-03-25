@@ -16,6 +16,7 @@ import Home from "@/pages/tenant/Home";
 //admin
 import AdminLayout from "@/layouts/AdminLayout";
 import AdminDashboard from "@/pages/admin/Dashboard";
+import UserManagement from "./pages/admin/user/UserManagement";
 
 export default function App() {
   return (
@@ -25,15 +26,18 @@ export default function App() {
           <Routes>
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="/" element={<TenantLayout />}>
-              <Route path="/login" element={<Login />} />
               <Route index element={<Home />} />
+              <Route path="/login" element={<Login />} />
               <Route element={<ProtectedRoute allowedRoles={['tenant']} />} >
                 {/* Các route cần bảo vệ sẽ được đặt ở đây */}
               </Route>
             </Route>
-            <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminLayout /></ProtectedRoute>} >
-              <Route index element={<AdminDashboard />} />
-              {/* Các route admin khác sẽ được đặt ở đây */}
+            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="/admin" element={<AdminLayout />} >
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<UserManagement />} />
+                {/* Các route admin khác sẽ được đặt ở đây */}
+              </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

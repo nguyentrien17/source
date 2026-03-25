@@ -26,9 +26,13 @@ exports.getAllUsers = async (req, res) => {
   try {
     const { page = 1, limit = 10, search = '', role = '' } = req.query;
     const result = await userService.getAllUsers({ page, limit, search, role });
-    res.json(result);
+    res.json({
+      success: true,
+      data: result,
+      status: 200
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi lấy danh sách user', error: err.message });
+    res.status(500).json({ success: false, message: 'Lỗi lấy danh sách user', error: err.message, status: 500 });
   }
 };
 
@@ -37,45 +41,62 @@ exports.createUser = async (req, res) => {
     // Kiểm tra trùng username qua service
     const isDuplicate = await userService.checkDuplicateUsername(req.body.username);
     if (isDuplicate) {
-      return res.status(409).json({ message: 'Tên đăng nhập đã tồn tại.' });
+      return res.status(409).json({ success: false, message: 'Tên đăng nhập đã tồn tại.', status: 409 });
     }
     const user = await userService.createUser(req.body);
-    res.status(201).json(user);
+    res.status(201).json({
+      success: true,
+      data: user,
+      status: 201
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi tạo user', error: err.message });
+    res.status(500).json({ success: false, message: 'Lỗi tạo user', error: err.message, status: 500 });
   }
 };
 
 exports.getUserById = async (req, res) => {
   try {
     const user = await userService.getUserById(req.params.id);
-    if (!user) return res.status(404).json({ message: 'Không tìm thấy user' });
-    res.json(user);
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy user', status: 404 });
+    res.json({
+      success: true,
+      data: user,
+      status: 200
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi lấy thông tin user', error: err.message });
+    res.status(500).json({ success: false, message: 'Lỗi lấy thông tin user', error: err.message, status: 500 });
   }
 };
 
 exports.updateUser = async (req, res) => {
   try {
     const user = await userService.updateUser(req.params.id, req.body);
-    if (!user) return res.status(404).json({ message: 'Không tìm thấy user' });
-    res.json(user);
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy user', status: 404 });
+    res.json({
+      success: true,
+      data: user,
+      status: 200
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi cập nhật user', error: err.message });
+    res.status(500).json({ success: false, message: 'Lỗi cập nhật user', error: err.message, status: 500 });
   }
 };
 
 exports.deleteUser = async (req, res) => {
   try {
     const user = await userService.deleteUser(req.params.id);
-    if (!user) return res.status(404).json({ message: 'Không tìm thấy user' });
-    res.json({ message: 'Xóa user thành công', user });
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy user', status: 404 });
+    res.json({
+      success: true,
+      message: 'Xóa user thành công',
+      data: user,
+      status: 200
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi xóa user', error: err.message });
+    res.status(500).json({ success: false, message: 'Lỗi xóa user', error: err.message, status: 500 });
   }
 };
 
 exports.getUsers = (req, res) => {
-  res.json({ message: 'Get all users' });
+  res.json({ success: true, message: 'Get all users', status: 200 });
 };
