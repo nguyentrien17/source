@@ -4,6 +4,7 @@ import { message } from "antd";
 import UserTable from "./components/UserTable";
 import UserForm from "./components/UserForm";
 import api from "@/utils/api";
+import { extractServerValidation, getServerErrorMessage, toAntdFieldErrors } from "@/utils/validation";
 
 export default function UserManagement() {
   // --- STATE CƠ BẢN ---
@@ -160,28 +161,17 @@ export default function UserManagement() {
         setSearchParams({});
       }
     } catch (err) {
-      const responseData = err.response?.data;
-      const backendErrors = responseData?.errors; // Mảng ['"email" is not valid', '"username" is required']
+      const validation = extractServerValidation(err);
 
-      if (Array.isArray(backendErrors)) {
-        // Chuyển đổi mảng lỗi của Joi thành format của Ant Design Form
-        // Giả sử lỗi Joi có dạng: "username" is required
-        const formFieldsErrors = backendErrors.map((msg) => {
-          const fieldName = msg.split('"')[1]; // Lấy tên field nằm trong ngoặc kép
-          return {
-            name: fieldName,
-            errors: [msg.replace(/"/g, "")], // Xóa ngoặc kép cho đẹp
-          };
-        });
-
-        // Gọi hàm callback để set lỗi trực tiếp vào Form instance ở component con
+      if (validation && Object.keys(validation.fieldErrors || {}).length > 0) {
         if (setFormErrors) {
-          setFormErrors(formFieldsErrors);
+          setFormErrors(toAntdFieldErrors(validation.fieldErrors));
         }
-        message.error("Vui lòng kiểm tra lại các trường thông tin!");
-      } else {
-        message.error(responseData?.message || "Có lỗi xảy ra!");
+        message.error(validation.message || "Vui lòng kiểm tra lại các trường thông tin!");
+        return;
       }
+
+      message.error(getServerErrorMessage(err, "Có lỗi xảy ra!"));
     } finally {
       setLoading(false);
     }

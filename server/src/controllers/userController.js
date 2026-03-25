@@ -4,9 +4,6 @@ const jwt = require('jsonwebtoken');
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Vui lòng nhập đầy đủ thông tin!' });
-    }
     const user = await userService.loginUser(username, password);
     if (!user) {
       return res.status(401).json({ message: 'Tên đăng nhập hoặc mật khẩu không đúng!' });
@@ -41,7 +38,13 @@ exports.createUser = async (req, res) => {
     // Kiểm tra trùng username qua service
     const isDuplicate = await userService.checkDuplicateUsername(req.body.username);
     if (isDuplicate) {
-      return res.status(409).json({ success: false, message: 'Tên đăng nhập đã tồn tại.', status: 409 });
+      return res.status(409).json({
+        success: false,
+        code: 'DUPLICATE_USERNAME',
+        message: 'Tên đăng nhập đã tồn tại.',
+        errors: { username: ['Tên đăng nhập đã tồn tại.'] },
+        status: 409
+      });
     }
     const user = await userService.createUser(req.body);
     res.status(201).json({

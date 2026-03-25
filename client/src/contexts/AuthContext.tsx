@@ -113,8 +113,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       if (isAxiosError(error) && error.response) {
         // Sai credentials / dữ liệu thiếu: trả về false để UI hiển thị "Sai tài khoản/mật khẩu"
-        if (error.response.status === 400 || error.response.status === 401) {
+        if (error.response.status === 401) {
           return false;
+        }
+        // Lỗi validate (422) cần để UI map lỗi theo field
+        if (error.response.status === 422) {
+          throw error;
         }
       }
       // Lỗi mạng/500: để UI bắt và hiển thị thông báo lỗi kết nối

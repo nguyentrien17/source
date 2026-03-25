@@ -5,12 +5,14 @@ import { MailOutlined, LockOutlined, EyeInvisibleOutlined, EyeOutlined } from '@
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { message } from 'antd'; // Để hiển thị thông báo lỗi đẹp mắt
+import { extractServerValidation, getServerErrorMessage } from '@/utils/validation';
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [username, setusername] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false); // Trạng thái loading của nút
+  const [fieldErrors, setFieldErrors] = useState({ username: '', password: '' });
 
   // Lấy các công cụ cần thiết từ React Router và Context của bạn
   const navigate = useNavigate();
@@ -19,11 +21,12 @@ export default function Login() {
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault(); // Ngăn trình duyệt load lại trang khi ấn submit
-    
-    if (!username || !password) {
-      message.warning('Vui lòng nhập đầy đủ username và mật khẩu!');
-      return;
-    }
+
+    const nextErrors = { username: '', password: '' };
+    if (!username) nextErrors.username = 'Vui lòng nhập tài khoản!';
+    if (!password) nextErrors.password = 'Vui lòng nhập mật khẩu!';
+    setFieldErrors(nextErrors);
+    if (nextErrors.username || nextErrors.password) return;
 
     try {
       setIsSubmitting(true);
@@ -46,8 +49,16 @@ export default function Login() {
         message.error('Sai tài khoản hoặc mật khẩu!');
       }
     } catch (error) {
-      const serverMessage = error?.response?.data?.message;
-      message.error(serverMessage || 'Lỗi kết nối máy chủ, vui lòng thử lại!');
+      const validation = extractServerValidation(error);
+      if (validation && Object.keys(validation.fieldErrors || {}).length) {
+        setFieldErrors({
+          username: validation.fieldErrors.username?.[0] || '',
+          password: validation.fieldErrors.password?.[0] || '',
+        });
+        message.error(validation.message || 'Vui lòng kiểm tra lại thông tin đăng nhập!');
+      } else {
+        message.error(getServerErrorMessage(error, 'Lỗi kết nối máy chủ, vui lòng thử lại!'));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -99,12 +110,18 @@ export default function Login() {
                 <input 
                   type="text" 
                   value={username}
-                  onChange={(e) => setusername(e.target.value)}
+                  onChange={(e) => {
+                    setusername(e.target.value);
+                    if (fieldErrors.username) setFieldErrors((prev) => ({ ...prev, username: '' }));
+                  }}
                   className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors outline-none" 
                   placeholder="Nhập tài khoản"
                   required
                 />
               </div>
+              {fieldErrors.username && (
+                <p className="mt-1.5 text-sm text-red-600">{fieldErrors.username}</p>
+              )}
             </div>
 
             <div>
@@ -116,7 +133,10 @@ export default function Login() {
                 <input 
                   type={showPassword ? "text" : "password"} 
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: '' }));
+                  }}
                   className="block w-full pl-11 pr-12 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors outline-none" 
                   placeholder="Nhập mật khẩu"
                   required
@@ -129,6 +149,9 @@ export default function Login() {
                   {showPassword ? <EyeInvisibleOutlined className="text-lg" /> : <EyeOutlined className="text-lg" />}
                 </button>
               </div>
+              {fieldErrors.password && (
+                <p className="mt-1.5 text-sm text-red-600">{fieldErrors.password}</p>
+              )}
             </div>
 
             <div className="flex items-center justify-between pt-2">

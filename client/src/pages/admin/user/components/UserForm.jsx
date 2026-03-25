@@ -74,7 +74,7 @@ export default function UserForm({
 
     // 2. Nếu là chế độ thêm mới (add), gửi toàn bộ dữ liệu
     if (mode === "add") {
-      onSave(formattedValues);
+      onSave(formattedValues, (fields) => form.setFields(fields));
       return;
     }
 
@@ -99,7 +99,7 @@ export default function UserForm({
       return;
     }
 
-    onSave(changedData);
+    onSave(changedData, (fields) => form.setFields(fields));
   };
 
   // Tạo URL fallback avatar khi người dùng chưa chọn ảnh
@@ -213,13 +213,25 @@ export default function UserForm({
                   name="fullname"
                   required
                   placeholder="Nguyễn Văn A"
+                  rules={[
+                    { min: 2, message: "Họ và tên phải từ 2 ký tự trở lên" },
+                  ]}
                 />
 
                 <FormField
                   label="Tên đăng nhập"
                   name="username"
-                  required
+                  required={mode === "add"}
+                  disabled={mode !== "add"}
                   placeholder="admin_01"
+                  rules={[
+                    { min: 3, message: "Tên đăng nhập phải từ 3 ký tự trở lên" },
+                    { max: 30, message: "Tên đăng nhập tối đa 30 ký tự" },
+                    {
+                      pattern: /^[a-zA-Z0-9]+$/,
+                      message: "Tên đăng nhập chỉ gồm chữ và số",
+                    },
+                  ]}
                 />
 
                 {mode === "add" && (
@@ -229,6 +241,9 @@ export default function UserForm({
                     type="password"
                     required
                     placeholder="••••••••"
+                    rules={[
+                      { min: 6, message: "Mật khẩu phải từ 6 ký tự trở lên" },
+                    ]}
                   />
                 )}
 
@@ -245,8 +260,19 @@ export default function UserForm({
                 <FormField
                   label="Số điện thoại"
                   name="phone"
-                  required
+                  required={false}
                   placeholder="0901234567"
+                  rules={[
+                    () => ({
+                      validator(_, value) {
+                        if (value === undefined || value === null || value === "") return Promise.resolve();
+                        const ok = /^(?:\d{10,11})$/.test(String(value));
+                        return ok
+                          ? Promise.resolve()
+                          : Promise.reject(new Error("Số điện thoại phải gồm 10-11 chữ số"));
+                      },
+                    }),
+                  ]}
                 />
 
                 <FormField

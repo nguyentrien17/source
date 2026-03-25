@@ -48,6 +48,7 @@ const findUserByEmail = async (email) => {
 };
 
 const createUser = async (data) => {
+  const { Op } = require("sequelize");
   // Kiểm tra trùng Email/Username
   const existing = await User.findOne({
     where: { [Op.or]: [{ username: data.username }] },
