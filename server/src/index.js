@@ -1,6 +1,7 @@
 const sequelize = require('./utils/database');
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -47,6 +48,9 @@ app.use(cors({
 }));
 
 app.use(express.json({ limit: '1mb' }));
+
+// Serve uploaded assets
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use(cookieParser());
 

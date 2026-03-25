@@ -1,6 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Form, Input, Select, DatePicker, Upload } from "antd";
+import { Form, Input, Select, DatePicker, Upload, message } from "antd";
 import {
   ArrowLeftOutlined,
   CameraOutlined,
@@ -10,6 +10,7 @@ import {
 import dayjs from "dayjs";
 import AppButton from "@/components/ui/AppButton";
 import FormField from "@/components/common/FormField";
+import api from "@/utils/api";
 
 const MotionDiv = motion.div;
 
@@ -24,6 +25,7 @@ export default function UserForm({
   onProvinceChange,
 }) {
   const [form] = Form.useForm();
+  const avatarFileRef = useRef(null);
   // Khi chọn province, gọi hàm lấy danh sách ward từ parent
   useEffect(() => {
     const provinceCode = form.getFieldValue("province");
@@ -42,33 +44,89 @@ export default function UserForm({
         ...initialData,
         dob: initialData.dob ? dayjs(initialData.dob) : null,
       });
+      avatarFileRef.current = null;
     } else {
       // Chế độ 'add' - Xóa dữ liệu cũ nếu có
       form.resetFields();
       form.setFieldsValue({ avatar: null });
+      avatarFileRef.current = null;
     }
   }, [initialData, mode, form]);
 
   // Lắng nghe sự thay đổi của tên để tạo Avatar động (Fallback)
   const watchFullname = Form.useWatch("fullname", form);
 
-  const handleAvatarChange = (info) => {
-    if (info.file.status === "done" || info.file.originFileObj) {
-      const imageUrl = URL.createObjectURL(info.file.originFileObj);
-      form.setFieldsValue({ avatar: imageUrl }); // Cập nhật ngầm vào Antd Form
+  const allowedExts = [".png", ".jpg", ".jpeg", ".webp", ".gif"];
+  const beforeUploadAvatar = (file) => {
+    const name = String(file?.name || "").toLowerCase();
+    const ext = name.includes(".") ? name.slice(name.lastIndexOf(".")) : "";
+
+    if (!allowedExts.includes(ext)) {
+      message.error(`Chỉ chấp nhận file ảnh: ${allowedExts.join(", ")}`);
+      return Upload.LIST_IGNORE;
     }
+
+    const isLt2M = file.size / 1024 / 1024 <= 2;
+    if (!isLt2M) {
+      message.error("Ảnh quá lớn (tối đa 2MB)");
+      return Upload.LIST_IGNORE;
+    }
+
+    // Chặn Upload tự động; chỉ lưu file, upload khi bấm Submit
+    return false;
+  };
+
+  const handleAvatarChange = (info) => {
+    const fileObj = info.file?.originFileObj || info.file;
+    if (!fileObj) return;
+
+    // AntD có thể bọc File trong object; ưu tiên Blob/File nếu có
+    const blob = fileObj instanceof Blob ? fileObj : fileObj?.originFileObj;
+    if (!blob) return;
+
+    avatarFileRef.current = blob;
+    const previewUrl = URL.createObjectURL(blob);
+    form.setFieldsValue({ avatar: previewUrl });
   };
 
   const handleDeleteAvatar = () => {
+    avatarFileRef.current = null;
     form.setFieldsValue({ avatar: null });
   };
 
-  const onFinish = (values) => {
+  const onFinish = async (values) => {
+    let avatarUrlToSave = values.avatar ?? null;
+
+    // Nếu user có chọn file mới, chỉ upload khi Submit
+    if (avatarFileRef.current) {
+      try {
+        const formData = new FormData();
+        formData.append("file", avatarFileRef.current);
+
+        const res = await api.post("/auth/users/upload-avatar", formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        const url = res?.data?.url;
+        if (!url) {
+          message.error("Không nhận được URL ảnh từ server");
+          return;
+        }
+        avatarUrlToSave = url;
+        form.setFieldsValue({ avatar: url });
+        avatarFileRef.current = null;
+      } catch (err) {
+        const serverMessage = err?.response?.data?.message;
+        message.error(serverMessage || "Tải ảnh thất bại");
+        return;
+      }
+    }
+
     // 1. Format lại dữ liệu từ form trước khi so sánh (Date, Avatar...)
     const formattedValues = {
       ...values,
       dob: values.dob ? values.dob.format("YYYY-MM-DD") : null,
-      avatar: values.avatar ?? null,
+      avatar: avatarUrlToSave,
     };
 
     // 2. Nếu là chế độ thêm mới (add), gửi toàn bộ dữ liệu
@@ -141,6 +199,9 @@ export default function UserForm({
             className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row gap-10 lg:gap-14"
             requiredMark={false} // Ẩn dấu hoa thị đỏ mặc định của Antd
           >
+            <Form.Item name="avatar" hidden>
+              <Input />
+            </Form.Item>
             {/* ================= CỘT TRÁI: AVATAR ================= */}
             <div className="w-full md:w-64 shrink-0 flex flex-col items-center">
               <div className="w-full bg-slate-50 rounded-2xl border border-slate-200 p-6 flex flex-col items-center text-center">
@@ -155,7 +216,9 @@ export default function UserForm({
                   {/* Lớp phủ Camera khi Hover */}
                   <Upload
                     showUploadList={false}
-                    beforeUpload={() => false}
+                    name="file"
+                    accept={allowedExts.join(",")}
+                    beforeUpload={beforeUploadAvatar}
                     onChange={handleAvatarChange}
                   >
                     <div className="w-32 h-32 absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 rounded-full cursor-pointer transition-opacity">
@@ -173,18 +236,6 @@ export default function UserForm({
 
                 {/* Nút thao tác dưới ảnh */}
                 <div className="flex flex-col w-full gap-2.5">
-                  <Upload
-                    showUploadList={false}
-                    beforeUpload={() => false}
-                    onChange={handleAvatarChange}
-                  >
-                    <button
-                      type="button"
-                      className="inline-flex items-center justify-center w-full px-4 py-2 border border-emerald-200 rounded-xl text-sm font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 cursor-pointer transition-colors"
-                    >
-                      <UploadOutlined className="mr-2" /> Tải ảnh lên
-                    </button>
-                  </Upload>
 
                   {avatarUrl && (
                     <button

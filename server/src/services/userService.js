@@ -1,6 +1,36 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const { v4: uuidv4 } = require("uuid");
+const fs = require("node:fs/promises");
+const path = require("node:path");
+
+const LOCAL_AVATAR_PREFIX = "/uploads/avatars/";
+
+function getLocalAvatarFilename(avatarValue) {
+  if (!avatarValue || typeof avatarValue !== "string") return null;
+  if (!avatarValue.startsWith(LOCAL_AVATAR_PREFIX)) return null;
+  const filename = path.basename(avatarValue.slice(LOCAL_AVATAR_PREFIX.length));
+  return filename || null;
+}
+
+async function safeDeleteLocalAvatarByValue(avatarValue) {
+  const filename = getLocalAvatarFilename(avatarValue);
+  if (!filename) return;
+  const absolutePath = path.resolve(
+    __dirname,
+    "..",
+    "..",
+    "uploads",
+    "avatars",
+    filename
+  );
+  try {
+    await fs.unlink(absolutePath);
+  } catch (err) {
+    if (err && err.code === "ENOENT") return;
+    throw err;
+  }
+}
 
 const getAllUsers = async ({
   page = 1,
@@ -67,9 +97,24 @@ const updateUser = async (id, data) => {
   const user = await User.findByPk(id);
   if (!user) return null;
 
+  const hasAvatarInPayload = Object.prototype.hasOwnProperty.call(data, "avatar");
+  const oldAvatar = user.avatar;
+  if (hasAvatarInPayload && (data.avatar === "" || data.avatar === undefined)) {
+    data.avatar = null;
+  }
+  const nextAvatar = hasAvatarInPayload
+    ? data.avatar
+    : oldAvatar;
+
   if (data.password) data.password = await bcrypt.hash(data.password, 10);
 
   await User.update(data, { where: { id } });
+
+  // Xóa file avatar cũ nếu user đổi avatar hoặc xóa avatar
+  if (hasAvatarInPayload && oldAvatar && oldAvatar !== nextAvatar) {
+    await safeDeleteLocalAvatarByValue(oldAvatar);
+  }
+
   const updated = await User.findByPk(id);
   const { password: _, ...rest } = updated.toJSON();
   return rest;

@@ -6,6 +6,7 @@ const validate = require('../middlewares/validate.middleware'); // Middleware ch
 const userSchemas = require('../validations/user.validation'); // Quy tắc Joi
 const authSchemas = require('../validations/auth.validation');
 const commonSchemas = require('../validations/common.validation');
+const { uploadAvatar } = require('../middlewares/uploadAvatar.middleware');
 
 // --- PUBLIC ROUTES ---
 router.post(
@@ -17,6 +18,51 @@ router.post(
 router.post('/logout', userController.logout);
 
 router.get('/me', auth(), userController.me);
+
+// Upload avatar (ADMIN)
+router.post(
+  '/users/upload-avatar',
+  auth(['admin']),
+  (req, res, next) => {
+    uploadAvatar.single('file')(req, res, (err) => {
+      if (!err) return next();
+
+      // Multer error (e.g., file too large)
+      if (err && err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(422).json({
+          success: false,
+          code: 'VALIDATION_ERROR',
+          message: 'File ảnh quá lớn (tối đa 2MB)',
+          errors: { file: ['File ảnh quá lớn (tối đa 2MB)'] },
+          status: 422,
+        });
+      }
+
+      const status = err.status || 422;
+      return res.status(status).json({
+        success: false,
+        code: 'VALIDATION_ERROR',
+        message: err.message || 'File không hợp lệ',
+        errors: { file: [err.message || 'File không hợp lệ'] },
+        status,
+      });
+    });
+  },
+  (req, res) => {
+    if (!req.file) {
+      return res.status(422).json({
+        success: false,
+        code: 'VALIDATION_ERROR',
+        message: 'Thiếu file ảnh',
+        errors: { file: ['Thiếu file ảnh'] },
+        status: 422,
+      });
+    }
+
+    const url = `/uploads/avatars/${req.file.filename}`;
+    res.json({ success: true, url, status: 200 });
+  }
+);
 
 // --- PRIVATE ROUTES (ADMIN ONLY) ---
 // Thứ tự: Check Login & Role -> Validate dữ liệu -> Thực hiện nghiệp vụ
