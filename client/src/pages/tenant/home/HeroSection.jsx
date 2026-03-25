@@ -9,6 +9,10 @@ import {
 export default function HeroSection() {
   const navigate = useNavigate();
 
+  const MotionDiv = motion.div;
+  const MotionH1 = motion.h1;
+  const MotionP = motion.p;
+
   // 1. CẤU HÌNH HIỆU ỨNG (VARIANTS)
   // Khung chứa tổng (Container) sẽ tự động kích hoạt các phần tử con bên trong chạy lần lượt
   const containerVariants = {
@@ -50,7 +54,7 @@ export default function HeroSection() {
       </div>
 
       {/* 2. ÁP DỤNG VARIANTS VÀO CONTAINER */}
-      <motion.div 
+      <MotionDiv 
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -60,23 +64,23 @@ export default function HeroSection() {
         {/* 3. ÁP DỤNG VARIANTS VÀO TỪNG PHẦN TỬ CON */}
         {/* Chú ý: Không cần viết lại initial/animate ở đây nữa, nó tự động thừa kế từ Container */}
         
-        <motion.h1 
+        <MotionH1 
           variants={itemVariants}
           className="text-4xl md:text-5xl lg:text-6xl font-bold text-white tracking-tight mb-6"
         >
           Tìm phòng trọ ưng ý, <br className="hidden md:block" />
           <span className="text-emerald-400">nhanh chóng & an toàn</span>
-        </motion.h1>
+        </MotionH1>
         
-        <motion.p 
+        <MotionP 
           variants={itemVariants}
           className="text-lg text-emerald-100 mb-10 max-w-2xl mx-auto"
         >
           Hơn 10,000+ phòng trọ, căn hộ mini, nhà nguyên căn được xác thực mỗi ngày.
-        </motion.p>
+        </MotionP>
 
         {/* Search Bar Floating */}
-        <motion.div 
+        <MotionDiv 
           variants={itemVariants}
           className="bg-white p-2 sm:p-3 rounded-2xl sm:rounded-full shadow-2xl flex flex-col sm:flex-row items-center max-w-4xl mx-auto gap-2 sm:gap-0"
         >
@@ -112,8 +116,8 @@ export default function HeroSection() {
           >
             <SearchOutlined className="mr-2 text-lg" /> Tìm kiếm
           </button>
-        </motion.div>
-      </motion.div>
+        </MotionDiv>
+      </MotionDiv>
     </section>
   );
 }

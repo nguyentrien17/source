@@ -1,22 +1,34 @@
 import axios from 'axios';
-import { AUTH_KEY } from './constants';
 
 const api = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 });
 
-// Tự động đính kèm Bearer token từ localStorage vào mọi request
-api.interceptors.request.use((config) => {
-  try {
-    const stored = localStorage.getItem(AUTH_KEY);
-    if (stored) {
-      const { token } = JSON.parse(stored) as { token: string };
-      if (token) config.headers.Authorization = `Bearer ${token}`;
+function getCookie(name: string) {
+  const parts = document.cookie.split(';').map((p) => p.trim());
+  for (const part of parts) {
+    if (part.startsWith(`${name}=`)) {
+      return decodeURIComponent(part.slice(name.length + 1));
     }
-  } catch {
-    // Bỏ qua lỗi parse
   }
+  return null;
+}
+
+// Tự động đính kèm CSRF token (double-submit cookie) cho request thay đổi trạng thái
+api.interceptors.request.use((config) => {
+  const method = (config.method || 'get').toLowerCase();
+  const isSafe = method === 'get' || method === 'head' || method === 'options';
+
+  if (!isSafe) {
+    const csrfToken = getCookie('csrf_token');
+    if (csrfToken) {
+      config.headers = config.headers || {};
+      config.headers['x-csrf-token'] = csrfToken;
+    }
+  }
+
   return config;
 });
 

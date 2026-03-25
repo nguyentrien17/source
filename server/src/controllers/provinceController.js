@@ -11,6 +11,6 @@ exports.getProvinces = async (req, res) => {
     });
     
   } catch (err) {
-    res.status(500).json({ message: 'Lỗi lấy danh sách tỉnh/xã', error: err.message });
+    res.status(500).json({ message: 'Lỗi lấy danh sách tỉnh/xã' });
   }
 };

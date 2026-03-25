@@ -31,7 +31,7 @@ export default function UserManagement() {
         ? res.data.data
         : res.data.data?.data || [];
       setUsers(userData);
-    } catch (err) {
+    } catch {
       message.error("Không thể tải danh sách người dùng!");
       setUsers([]);
     } finally {
@@ -50,7 +50,7 @@ export default function UserManagement() {
       try {
         const res = await api.get("/provinces");
         setProvinces(res.data.data || []);
-      } catch (err) {
+      } catch {
         setProvinces([]);
       }
     }
@@ -58,7 +58,7 @@ export default function UserManagement() {
   }, []);
 
   // --- HÀM LẤY QUẬN HUYỆN ---
-  const handleProvinceChange = async (provinceCode) => {
+  const handleProvinceChange = useCallback(async (provinceCode) => {
     if (!provinceCode) {
       setWards([]);
       return;
@@ -66,10 +66,10 @@ export default function UserManagement() {
     try {
       const res = await api.get(`/provinces?parent=${provinceCode}`);
       setWards(res.data.data || []);
-    } catch (err) {
+    } catch {
       setWards([]);
     }
-  };
+  }, []);
 
   // --- 3. PHỤC HỒI STATE KHI BỊ F5 (RELOAD TRANG) ---
   useEffect(() => {
@@ -86,7 +86,7 @@ export default function UserManagement() {
           if (userData?.province) {
             handleProvinceChange(userData.province);
           }
-        } catch (err) {
+        } catch {
           message.error("Không tìm thấy thông tin người dùng này!");
           setSearchParams({}); // Xóa URL lỗi, đá về bảng list
         } finally {
@@ -95,7 +95,7 @@ export default function UserManagement() {
       }
       fetchUserToEdit();
     }
-  }, [currentView, editId]); // Chỉ chạy khi URL thay đổi
+  }, [currentView, editId, editingUser, handleProvinceChange, setSearchParams]);
 
   // --- TÌM KIẾM & LỌC ---
   const filteredUsers = users.filter((user) => {
@@ -136,8 +136,8 @@ export default function UserManagement() {
       } else {
         message.error(res.data.message || "Không thể xóa người dùng!");
       }
-    } catch (err) {
-      message.error(err.response?.data?.message || "Lỗi kết nối đến máy chủ!");
+    } catch (error) {
+      message.error(error.response?.data?.message || "Lỗi kết nối đến máy chủ!");
     } finally {
       setLoading(false);
     }

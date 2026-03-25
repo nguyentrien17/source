@@ -14,6 +14,10 @@ router.post(
   userController.login
 );
 
+router.post('/logout', userController.logout);
+
+router.get('/me', auth(), userController.me);
+
 // --- PRIVATE ROUTES (ADMIN ONLY) ---
 // Thứ tự: Check Login & Role -> Validate dữ liệu -> Thực hiện nghiệp vụ
 router.get(

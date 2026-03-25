@@ -34,10 +34,6 @@ export default function FormField({
     ...rules,
   ];
 
-  // 3. Class CSS dùng chung cho tất cả các loại Input
-  const commonClass =
-    "rounded-xl px-4 py-2.5 hover:border-emerald-500 focus:border-emerald-500 bg-slate-50/50 w-full transition-all";
-
   // 4. Chọn Component hiển thị dựa trên 'type'
   const renderInput = () => {
     // Dùng h-[46px] và items-center để tất cả các ô cao bằng nhau

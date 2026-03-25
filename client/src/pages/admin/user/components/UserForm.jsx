@@ -11,6 +11,8 @@ import dayjs from "dayjs";
 import AppButton from "@/components/ui/AppButton";
 import FormField from "@/components/common/FormField";
 
+const MotionDiv = motion.div;
+
 // provinces: mảng tên tỉnh/thành phố truyền từ UserManagement
 export default function UserForm({
   mode,
@@ -32,7 +34,7 @@ export default function UserForm({
   }, [form.getFieldValue("province")]);
 
   // State quản lý avatar (để hiện preview hình lớn bên trái)
-  const [avatarUrl, setAvatarUrl] = React.useState(null);
+  const avatarUrl = Form.useWatch("avatar", form);
 
   useEffect(() => {
     if (initialData && mode === "edit") {
@@ -40,11 +42,10 @@ export default function UserForm({
         ...initialData,
         dob: initialData.dob ? dayjs(initialData.dob) : null,
       });
-      setAvatarUrl(initialData.avatar);
     } else {
       // Chế độ 'add' - Xóa dữ liệu cũ nếu có
       form.resetFields();
-      setAvatarUrl(null);
+      form.setFieldsValue({ avatar: null });
     }
   }, [initialData, mode, form]);
 
@@ -54,13 +55,11 @@ export default function UserForm({
   const handleAvatarChange = (info) => {
     if (info.file.status === "done" || info.file.originFileObj) {
       const imageUrl = URL.createObjectURL(info.file.originFileObj);
-      setAvatarUrl(imageUrl);
       form.setFieldsValue({ avatar: imageUrl }); // Cập nhật ngầm vào Antd Form
     }
   };
 
   const handleDeleteAvatar = () => {
-    setAvatarUrl(null);
     form.setFieldsValue({ avatar: null });
   };
 
@@ -69,7 +68,7 @@ export default function UserForm({
     const formattedValues = {
       ...values,
       dob: values.dob ? values.dob.format("YYYY-MM-DD") : null,
-      avatar: avatarUrl,
+      avatar: values.avatar ?? null,
     };
 
     // 2. Nếu là chế độ thêm mới (add), gửi toàn bộ dữ liệu
@@ -106,7 +105,7 @@ export default function UserForm({
   const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(watchFullname || "User")}&background=10b981&color=fff`;
 
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className="flex flex-col h-full"
@@ -368,6 +367,6 @@ export default function UserForm({
           </AppButton>
         </div>
       </div>
-    </motion.div>
+    </MotionDiv>
   );
 }

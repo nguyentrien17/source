@@ -25,7 +25,6 @@ export default defineConfig({
       '@ant-design/icons',
       '@ant-design/cssinjs',
       'axios',
-      'lucide-react',
       'jwt-decode',
     ],
   },

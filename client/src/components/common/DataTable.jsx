@@ -4,6 +4,8 @@ import { Table, Input, Select } from "antd";
 import { SearchOutlined, PlusOutlined } from "@ant-design/icons";
 import AppButton from "@/components/ui/AppButton";
 
+const MotionDiv = motion.div;
+
 export default function DataTable({
   title,
   description,
@@ -49,7 +51,7 @@ export default function DataTable({
 
 
   return (
-    <motion.div
+    <MotionDiv
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="flex flex-col h-full"
@@ -116,6 +118,6 @@ export default function DataTable({
           }}
         />
       </div>
-    </motion.div>
+    </MotionDiv>
   );
 }

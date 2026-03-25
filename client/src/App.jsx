@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import './index.css'
-import { ConfigProvider } from 'antd'
+import "./index.css";
+import { ConfigProvider } from "antd";
 import viVN from "antd/locale/vi_VN";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -28,12 +28,12 @@ export default function App() {
             <Route path="/" element={<TenantLayout />}>
               <Route index element={<Home />} />
               <Route path="/login" element={<Login />} />
-              <Route element={<ProtectedRoute allowedRoles={['tenant']} />} >
+              <Route element={<ProtectedRoute allowedRoles={["tenant"]} />}>
                 {/* Các route cần bảo vệ sẽ được đặt ở đây */}
               </Route>
             </Route>
-            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-              <Route path="/admin" element={<AdminLayout />} >
+            <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+              <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="users" element={<UserManagement />} />
                 {/* Các route admin khác sẽ được đặt ở đây */}
@@ -44,5 +44,5 @@ export default function App() {
         </BrowserRouter>
       </AuthProvider>
     </ConfigProvider>
-  )
+  );
 }

@@ -23,6 +23,8 @@ const RECENT_LISTINGS = [
   { id: 'ROOM-003', title: 'Nhà nguyên căn 2 lầu', host: 'Lê Văn C', date: '23/03/2026', status: 'rejected', price: '12.0 tr' },
 ];
 
+const MotionDiv = motion.div;
+
 export default function AdminDashboard() {
   return (
     <div className="w-full">
@@ -36,7 +38,7 @@ export default function AdminDashboard() {
         {STATS.map((stat, index) => {
           const Icon = stat.icon;
           return (
-            <motion.div 
+            <MotionDiv 
               key={index}
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}
               className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow"
@@ -51,7 +53,7 @@ export default function AdminDashboard() {
               </div>
               <h3 className="text-slate-500 text-sm font-medium mb-1">{stat.title}</h3>
               <p className="text-3xl font-bold text-slate-900">{stat.value}</p>
-            </motion.div>
+            </MotionDiv>
           )
         })}
       </div>
