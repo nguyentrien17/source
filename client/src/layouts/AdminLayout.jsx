@@ -39,7 +39,7 @@ export default function AdminLayout() {
           <div className="p-2 bg-emerald-800 rounded-xl mr-3 flex items-center justify-center">
             <HomeFilled className="text-emerald-400 text-xl" />
           </div>
-          <span className="text-2xl font-bold text-white tracking-tight">SmartRent</span>
+          <span className="text-2xl font-bold text-white tracking-tight">TimTroNhanh</span>
         </div>
 
         {/* Menu Items */}
@@ -78,13 +78,7 @@ export default function AdminLayout() {
         {/* TOPBAR */}
         <header className="h-20 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0">
           {/* Search Bar */}
-          <div className="flex items-center bg-slate-100 px-4 py-2.5 rounded-full w-96 focus-within:ring-2 focus-within:ring-emerald-500 transition-all">
-            <SearchOutlined className="text-slate-400 mr-2 text-lg shrink-0" />
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm phòng, người dùng..." 
-              className="bg-transparent border-none outline-none text-sm w-full text-slate-700 placeholder:text-slate-400"
-            />
+          <div>
           </div>
 
           {/* Profile & Notifications */}
@@ -110,7 +104,7 @@ export default function AdminLayout() {
         </header>
 
         {/* NƠI HIỂN THỊ CÁC TRANG CON */}
-        <div className="flex-1 overflow-y-auto bg-slate-50/50 p-8">
+        <div className="flex-1 overflow-y-auto bg-slate-50/50 p-4">
           <Outlet />
         </div>
 
