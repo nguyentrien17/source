@@ -18,6 +18,9 @@ import AdminLayout from "@/layouts/AdminLayout";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import UserManagement from "./pages/admin/user/UserManagement";
 
+//landlord
+import PropertyManagement from "./pages/landlord/property/PropertyManagement";
+
 export default function App() {
   return (
     <ConfigProvider locale={viVN}>
@@ -36,6 +39,7 @@ export default function App() {
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="users" element={<UserManagement />} />
+                <Route path="rooms" element={<PropertyManagement />} />
                 {/* Các route admin khác sẽ được đặt ở đây */}
               </Route>
             </Route>

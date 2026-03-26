@@ -76,6 +76,7 @@ router.get(
 router.post(
   '/users', 
   auth(['admin']), 
+  uploadAvatar.single('avatar'),
   validate(userSchemas.create), // Chặn dữ liệu sai trước khi tạo
   userController.createUser
 );
@@ -90,6 +91,7 @@ router.get(
 router.put(
   '/users/:id', 
   auth(['admin']), 
+  uploadAvatar.single('avatar'),
   validate({ params: commonSchemas.idParam, body: userSchemas.update }), // Chặn dữ liệu sai trước khi cập nhật
   userController.updateUser
 );

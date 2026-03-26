@@ -221,11 +221,24 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
+const fs = require('fs');
+
 exports.createUser = async (req, res) => {
   try {
+    // Nếu có file ảnh upload, gán path vào body để service lưu vào DB
+    if (req.file) {
+      req.body.avatar = `/uploads/avatars/${req.file.filename}`;
+    }
+
     // Kiểm tra trùng username qua service
     const isDuplicate = await userService.checkDuplicateUsername(req.body.username);
     if (isDuplicate) {
+      // Nếu lỗi trùng lặp, xóa file ảnh vừa upload (nếu có)
+      if (req.file) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error("Lỗi xóa file rác:", err);
+        });
+      }
       return res.status(409).json({
         success: false,
         code: 'DUPLICATE_USERNAME',
@@ -241,6 +254,12 @@ exports.createUser = async (req, res) => {
       status: 201
     });
   } catch (err) {
+    // Nếu có lỗi bất kỳ trong quá trình tạo user (kể cả lỗi DB), xóa file ảnh vừa upload
+    if (req.file) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error("Lỗi xóa file rác:", err);
+      });
+    }
     res.status(500).json({ success: false, message: 'Lỗi tạo user', status: 500 });
   }
 };
@@ -261,14 +280,31 @@ exports.getUserById = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   try {
+    if (req.file) {
+      req.body.avatar = `/uploads/avatars/${req.file.filename}`;
+    }
     const user = await userService.updateUser(req.params.id, req.body);
-    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy user', status: 404 });
+    if (!user) {
+      // Nếu không tìm thấy user để update, xóa file ảnh mới upload (nếu có)
+      if (req.file) {
+        fs.unlink(req.file.path, (err) => {
+          if (err) console.error("Lỗi xóa file rác:", err);
+        });
+      }
+      return res.status(404).json({ success: false, message: 'Không tìm thấy user', status: 404 });
+    }
     res.json({
       success: true,
       data: user,
       status: 200
     });
   } catch (err) {
+    // Nếu có lỗi trong quá trình update, xóa file ảnh vừa upload
+    if (req.file) {
+      fs.unlink(req.file.path, (err) => {
+        if (err) console.error("Lỗi xóa file rác:", err);
+      });
+    }
     res.status(500).json({ success: false, message: 'Lỗi cập nhật user', status: 500 });
   }
 };

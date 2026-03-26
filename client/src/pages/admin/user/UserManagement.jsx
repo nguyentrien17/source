@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useSearchParams } from "react-router-dom"; // 1. Import hook quản lý URL
-import { message } from "antd";
+import { useSearchParams } from "react-router-dom";
+import { message, Spin } from "antd";
 import UserTable from "./components/UserTable";
 import UserForm from "./components/UserForm";
 import api from "@/utils/api";
+import { fetchProvinces, fetchWards } from "@/utils/location";
 import { extractServerValidation, getServerErrorMessage, toAntdFieldErrors } from "@/utils/validation";
 
 export default function UserManagement() {
-  // --- STATE CƠ BẢN ---
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [provinces, setProvinces] = useState([]);
@@ -15,14 +15,12 @@ export default function UserManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
 
-  // --- QUẢN LÝ VIEW BẰNG URL ---
   const [searchParams, setSearchParams] = useSearchParams();
-  const currentView = searchParams.get("view") || "list"; // Mặc định là 'list'
-  const editId = searchParams.get("id"); // Lấy ID từ URL nếu đang ở chế độ sửa
+  const currentView = searchParams.get("view") || "list";
+  const editId = searchParams.get("id");
 
   const [editingUser, setEditingUser] = useState(null);
 
-  // --- 1. LẤY DANH SÁCH USER ---
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
@@ -39,41 +37,24 @@ export default function UserManagement() {
     }
   }, []);
 
-  // Sửa lại useEffect ban đầu
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
-  // --- 2. LẤY DANH SÁCH TỈNH/THÀNH ---
   useEffect(() => {
-    async function fetchProvinces() {
-      try {
-        const res = await api.get("/provinces");
-        setProvinces(res.data.data || []);
-      } catch {
-        setProvinces([]);
-      }
-    }
-    fetchProvinces();
+    fetchProvinces().then(setProvinces);
   }, []);
 
-  // --- HÀM LẤY QUẬN HUYỆN ---
   const handleProvinceChange = useCallback(async (provinceCode) => {
     if (!provinceCode) {
       setWards([]);
       return;
     }
-    try {
-      const res = await api.get(`/provinces?parent=${provinceCode}`);
-      setWards(res.data.data || []);
-    } catch {
-      setWards([]);
-    }
+    const wards = await fetchWards(provinceCode);
+    setWards(wards);
   }, []);
 
-  // --- 3. PHỤC HỒI STATE KHI BỊ F5 (RELOAD TRANG) ---
   useEffect(() => {
-    // Nếu URL đang đòi sửa User, nhưng data lại trống (do vừa F5)
     if (currentView === "edit" && editId && !editingUser) {
       async function fetchUserToEdit() {
         setLoading(true);
@@ -82,13 +63,12 @@ export default function UserManagement() {
           const userData = res.data.data;
           setEditingUser(userData);
 
-          // Tự động load danh sách Quận/Huyện nếu user đã có Tỉnh
           if (userData?.province) {
             handleProvinceChange(userData.province);
           }
         } catch {
           message.error("Không tìm thấy thông tin người dùng này!");
-          setSearchParams({}); // Xóa URL lỗi, đá về bảng list
+          setSearchParams({});
         } finally {
           setLoading(false);
         }
@@ -97,7 +77,6 @@ export default function UserManagement() {
     }
   }, [currentView, editId, editingUser, handleProvinceChange, setSearchParams]);
 
-  // --- TÌM KIẾM & LỌC ---
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       (user.fullname || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -107,58 +86,46 @@ export default function UserManagement() {
     return matchesSearch && matchesRole;
   });
 
-  // --- CÁC HÀM ĐIỀU HƯỚNG BẰNG URL ---
   const handleAddClick = () => {
     setEditingUser(null);
     setWards([]);
-    setSearchParams({ view: "add" }); // URL sẽ thành: ?view=add
+    setSearchParams({ view: "add" });
   };
 
   const handleEditClick = (user) => {
     setEditingUser(user);
     if (user.province) handleProvinceChange(user.province);
-    setSearchParams({ view: "edit", id: user.id }); // URL sẽ thành: ?view=edit&id=...
+    setSearchParams({ view: "edit", id: user.id });
   };
 
   const handleCancelClick = () => {
     setEditingUser(null);
-    setSearchParams({}); // Xóa param, trở về giao diện list mặc định
+    setSearchParams({});
   };
 
-  // --- XÓA USER ---
   const handleDeleteConfirm = async (userId) => {
-    setLoading(true);
-    try {
-      const res = await api.delete(`/auth/users/${userId}`);
-      if (res.data && res.data.success) {
-        setUsers(users.filter((u) => u.id !== userId));
-        message.success("Đã xóa người dùng thành công!");
-      } else {
-        message.error(res.data.message || "Không thể xóa người dùng!");
-      }
-    } catch (error) {
-      message.error(error.response?.data?.message || "Lỗi kết nối đến máy chủ!");
-    } finally {
-      setLoading(false);
-    }
+    console.log(userId);
+    // Code API xóa user
   };
 
-  // --- LƯU FORM ---
   const handleSaveForm = async (userData, setFormErrors) => {
-    // Thêm setFormErrors
     setLoading(true);
     try {
       let res;
+      const config = userData instanceof FormData ? { headers: { "Content-Type": "multipart/form-data" } } : {};
+
       if (editingUser) {
-        res = await api.put(`/auth/users/${editingUser.id}`, userData);
+        res = await api.put(`/auth/users/${editingUser.id}`, userData, config);
       } else {
-        res = await api.post("/auth/users", userData);
+        res = await api.post("/auth/users", userData, config);
       }
 
       if (res.data?.success) {
         message.success("Thao tác thành công!");
-        await fetchUsers();
-        setSearchParams({});
+        setEditingUser(null);
+        setSearchParams({}); 
+        fetchUsers(); 
+        return;
       }
     } catch (err) {
       const validation = extractServerValidation(err);
@@ -176,8 +143,14 @@ export default function UserManagement() {
       setLoading(false);
     }
   };
+  if (currentView === "edit" && !editingUser) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] w-full">
+        <Spin description="Đang tải thông tin người dùng..." size="large" />
+      </div>
+    );
+  }
 
-  // Render Form Thêm mới (Hoặc Form sửa KHI ĐÃ LẤY XONG DATA)
   if (currentView === "add" || (currentView === "edit" && editingUser)) {
     return (
       <UserForm
@@ -192,7 +165,6 @@ export default function UserManagement() {
     );
   }
 
-  // Render Bảng (Mặc định)
   return (
     <UserTable
       users={filteredUsers}
@@ -203,7 +175,7 @@ export default function UserManagement() {
       onAddClick={handleAddClick}
       onEditClick={handleEditClick}
       onDeleteConfirm={handleDeleteConfirm}
-      loading={loading} // Sẽ hiện xoay xoay ở bảng nếu đang tải Data (F5 edit)
+      loading={loading}
     />
   );
 }

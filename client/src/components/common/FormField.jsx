@@ -1,5 +1,5 @@
 import React from "react";
-import { Form, Input, Select, DatePicker } from "antd";
+import { Form, Input, Select, DatePicker, InputNumber, Checkbox, Upload } from "antd";
 
 const { Password } = Input;
 
@@ -8,7 +8,7 @@ const { Password } = Input;
  * @param {string} label - Tiêu đề ô nhập
  * @param {string} name - Tên trường dữ liệu (liên kết với Form)
  * @param {boolean} required - Có bắt buộc hay không
- * @param {string} type - Loại ô nhập: 'text' | 'password' | 'select' | 'date' | 'textarea'
+ * @param {string} type - Loại ô nhập: 'text' | 'password' | 'select' | 'date' | 'textarea' | 'number' | 'checkbox-group' | 'upload'
  * @param {object} props - Các thuộc tính khác (placeholder, options, rows...)
  */
 export default function FormField({
@@ -17,6 +17,9 @@ export default function FormField({
   required = false,
   type = "text",
   rules = [],
+  formItemProps = {},
+  uploadText,
+  children,
   ...props
 }) {
   // 1. Tạo Label có dấu sao đỏ chuẩn UI của bạn
@@ -34,11 +37,25 @@ export default function FormField({
     ...rules,
   ];
 
+  const autoFormItemProps =
+    type === "upload"
+      ? {
+          valuePropName: "fileList",
+          getValueFromEvent: (e) => {
+            if (Array.isArray(e)) return e;
+            return e?.fileList;
+          },
+        }
+      : {};
+
   // 4. Chọn Component hiển thị dựa trên 'type'
   const renderInput = () => {
     // Dùng h-[46px] và items-center để tất cả các ô cao bằng nhau
     const commonClass =
       "h-[40px] rounded-xl px-4 hover:border-emerald-500 focus:border-emerald-500 bg-slate-50/50 w-full transition-all flex items-center";
+
+    const commonNumberClass =
+      "w-full h-[40px] rounded-xl hover:border-emerald-500 focus:border-emerald-500 bg-slate-50/50 transition-all";
 
     switch (type) {
       case "password":
@@ -85,6 +102,34 @@ export default function FormField({
           />
         );
 
+      case "number":
+        return (
+          <InputNumber
+            className={commonNumberClass}
+            style={{ width: "100%" }}
+            {...props}
+          />
+        );
+
+      case "checkbox-group":
+        return (
+          <Checkbox.Group
+            {...props}
+          />
+        );
+
+      case "upload":
+        return (
+          <Upload
+            listType="picture-card"
+            multiple
+            beforeUpload={() => false}
+            {...props}
+          >
+            {children ?? <div className="text-xs">{uploadText || "Tải ảnh"}</div>}
+          </Upload>
+        );
+
       default:
         return <Input className={commonClass} {...props} />;
     }
@@ -97,6 +142,8 @@ export default function FormField({
       rules={fieldRules}
       // Giúp căn chỉnh Grid không bị lệch khi báo lỗi
       className="mb-4"
+      {...autoFormItemProps}
+      {...formItemProps}
     >
       {renderInput()}
     </Form.Item>

@@ -5,8 +5,7 @@ import {
   TeamOutlined, 
   SettingOutlined, 
   LogoutOutlined, 
-  BellOutlined, 
-  SearchOutlined,
+  BellOutlined,
   HomeFilled
 } from '@ant-design/icons';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,7 +18,7 @@ export default function AdminLayout() {
   // Danh sách menu điều hướng
   const menuItems = [
     { path: '/admin', icon: <DashboardOutlined size={20} />, label: 'Tổng quan' },
-    { path: '/admin/rooms', icon: <BankOutlined size={20} />, label: 'Quản lý phòng' },
+    { path: '/admin/rooms', icon: <BankOutlined size={20} />, label: 'Quản lý khu trọ' },
     { path: '/admin/users', icon: <TeamOutlined size={20} />, label: 'Người dùng' },
     { path: '/admin/settings', icon: <SettingOutlined size={20} />, label: 'Cài đặt' },
   ];

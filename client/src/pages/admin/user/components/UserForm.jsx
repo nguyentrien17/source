@@ -1,20 +1,10 @@
 import React, { useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import { Form, Input, Select, DatePicker, Upload, message } from "antd";
-import {
-  ArrowLeftOutlined,
-  CameraOutlined,
-  UploadOutlined,
-  DeleteOutlined,
-} from "@ant-design/icons";
+import { Form, Input, message, Upload } from "antd";
+import { CameraOutlined, DeleteOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
-import AppButton from "@/components/ui/AppButton";
 import FormField from "@/components/common/FormField";
-import api from "@/utils/api";
+import EntityFormShell from "@/components/common/EntityFormShell";
 
-const MotionDiv = motion.div;
-
-// provinces: mảng tên tỉnh/thành phố truyền từ UserManagement
 export default function UserForm({
   mode,
   initialData,
@@ -26,37 +16,28 @@ export default function UserForm({
 }) {
   const [form] = Form.useForm();
   const avatarFileRef = useRef(null);
-  // Khi chọn province, gọi hàm lấy danh sách ward từ parent
-  useEffect(() => {
-    const provinceCode = form.getFieldValue("province");
-    if (provinceCode && typeof onProvinceChange === "function") {
-      onProvinceChange(provinceCode);
-    }
-    // eslint-disable-next-line
-  }, [form.getFieldValue("province")]);
 
-  // State quản lý avatar (để hiện preview hình lớn bên trái)
+  // Theo dõi giá trị để làm Avatar preview động
   const avatarUrl = Form.useWatch("avatar", form);
+  const watchFullname = Form.useWatch("fullname", form);
 
+  // 1. Khởi tạo dữ liệu khi mở Form
   useEffect(() => {
     if (initialData && mode === "edit") {
       form.setFieldsValue({
         ...initialData,
         dob: initialData.dob ? dayjs(initialData.dob) : null,
       });
-      avatarFileRef.current = null;
     } else {
-      // Chế độ 'add' - Xóa dữ liệu cũ nếu có
       form.resetFields();
-      form.setFieldsValue({ avatar: null });
-      avatarFileRef.current = null;
+      form.setFieldsValue({ role: "tenant", avatar: null });
     }
+    avatarFileRef.current = null;
   }, [initialData, mode, form]);
 
-  // Lắng nghe sự thay đổi của tên để tạo Avatar động (Fallback)
-  const watchFullname = Form.useWatch("fullname", form);
-
+  // 2. Xử lý logic Avatar
   const allowedExts = [".png", ".jpg", ".jpeg", ".webp", ".gif"];
+  
   const beforeUploadAvatar = (file) => {
     const name = String(file?.name || "").toLowerCase();
     const ext = name.includes(".") ? name.slice(name.lastIndexOf(".")) : "";
@@ -71,21 +52,15 @@ export default function UserForm({
       message.error("Ảnh quá lớn (tối đa 2MB)");
       return Upload.LIST_IGNORE;
     }
-
-    // Chặn Upload tự động; chỉ lưu file, upload khi bấm Submit
-    return false;
+    return false; // Chặn upload tự động
   };
 
   const handleAvatarChange = (info) => {
     const fileObj = info.file?.originFileObj || info.file;
     if (!fileObj) return;
 
-    // AntD có thể bọc File trong object; ưu tiên Blob/File nếu có
-    const blob = fileObj instanceof Blob ? fileObj : fileObj?.originFileObj;
-    if (!blob) return;
-
-    avatarFileRef.current = blob;
-    const previewUrl = URL.createObjectURL(blob);
+    avatarFileRef.current = fileObj;
+    const previewUrl = URL.createObjectURL(fileObj);
     form.setFieldsValue({ avatar: previewUrl });
   };
 
@@ -94,330 +69,182 @@ export default function UserForm({
     form.setFieldsValue({ avatar: null });
   };
 
+  // 3. Xử lý khi nhấn Lưu (Refactored: Gửi FormData 1 lần gồm cả file và data)
   const onFinish = async (values) => {
-    let avatarUrlToSave = values.avatar ?? null;
+    const formData = new FormData();
 
-    // Nếu user có chọn file mới, chỉ upload khi Submit
-    if (avatarFileRef.current) {
-      try {
-        const formData = new FormData();
-        formData.append("file", avatarFileRef.current);
+    // Duyệt qua các field để append vào FormData
+    Object.keys(values).forEach((key) => {
+      if (key === "avatar") return; // Avatar xử lý riêng
 
-        const res = await api.post("/auth/users/upload-avatar", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+      let val = values[key];
+      if (val === undefined || val === null) return; // Bỏ qua null/undefined
 
-        const url = res?.data?.url;
-        if (!url) {
-          message.error("Không nhận được URL ảnh từ server");
-          return;
-        }
-        avatarUrlToSave = url;
-        form.setFieldsValue({ avatar: url });
-        avatarFileRef.current = null;
-      } catch (err) {
-        const serverMessage = err?.response?.data?.message;
-        message.error(serverMessage || "Tải ảnh thất bại");
-        return;
+      if (key === "dob" && val) {
+        val = dayjs(val).format("YYYY-MM-DD");
       }
-    }
 
-    // 1. Format lại dữ liệu từ form trước khi so sánh (Date, Avatar...)
-    const formattedValues = {
-      ...values,
-      dob: values.dob ? values.dob.format("YYYY-MM-DD") : null,
-      avatar: avatarUrlToSave,
-    };
+      // Với password logic:
+      // - Add Mode: Bắt buộc (đã check required ở Form.Item), gửi bình thường.
+      // - Edit Mode: Nếu trống (người dùng không nhập gì) thì không gửi field này đi để giữ pass cũ.
+      if (mode !== "add" && key === "password" && !val) return;
 
-    // 2. Nếu là chế độ thêm mới (add), gửi toàn bộ dữ liệu
-    if (mode === "add") {
-      onSave(formattedValues, (fields) => form.setFields(fields));
-      return;
-    }
-
-    // 3. Nếu là chế độ chỉnh sửa (edit), lọc các trường có thay đổi
-    const changedData = {};
-
-    Object.keys(formattedValues).forEach((key) => {
-      const newValue = formattedValues[key];
-      const oldValue = initialData[key];
-
-      // So sánh giá trị mới và cũ
-      // Lưu ý: Dùng != để so sánh tương đối hoặc JSON.stringify cho object/array nếu cần
-      if (newValue !== oldValue) {
-        changedData[key] = newValue;
-      }
+      formData.append(key, val);
     });
 
-    // Kiểm tra nếu không có gì thay đổi thì không cần gọi API hoặc báo cho user
-    if (Object.keys(changedData).length === 0) {
-      // Tùy chọn: Có thể đóng form luôn hoặc thông báo "Không có thay đổi"
-      onCancel();
-      return;
+    // Xử lý Avatar file
+    if (avatarFileRef.current) {
+      // Có file mới
+      formData.append("avatar", avatarFileRef.current);
+    } else if (values.avatar === null) {
+      // Đã xóa ảnh (null) -> Gửi string rỗng để backend update thành ''
+      formData.append("avatar", "");
     }
+    // Nếu values.avatar là URL cũ -> Không append gì -> Backend không update trường avatar
 
-    onSave(changedData, (fields) => form.setFields(fields));
+    onSave(formData, (fields) => form.setFields(fields));
   };
 
-  // Tạo URL fallback avatar khi người dùng chưa chọn ảnh
-  const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(watchFullname || "User")}&background=10b981&color=fff`;
+  const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    watchFullname || "User"
+  )}&background=10b981&color=fff`;
 
   return (
-    <MotionDiv
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col h-full"
+    <EntityFormShell
+      title={mode === "add" ? "Thêm người dùng mới" : "Chỉnh sửa người dùng"}
+      subtitle={
+        mode === "add"
+          ? "Điền thông tin chi tiết để tạo tài khoản mới."
+          : "Cập nhật thông tin tài khoản người dùng."
+      }
+      onBack={onCancel}
+      onCancel={onCancel}
+      onSubmit={() => form.submit()}
+      submitText={mode === "add" ? "Tạo người dùng" : "Lưu thay đổi"}
     >
-      {/* --- HEADER --- */}
-      <div className="mb-6 flex items-center">
-        <button
-          onClick={onCancel}
-          className="mr-4 p-2 text-slate-400 hover:text-emerald-600 transition-colors rounded-full hover:bg-emerald-50 border border-transparent"
-        >
-          <ArrowLeftOutlined className="text-xl" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            {mode === "add" ? "Thêm người dùng mới" : "Chỉnh sửa người dùng"}
-          </h1>
-          <p className="text-slate-500 mt-1 text-sm">
-            {mode === "add"
-              ? "Điền thông tin chi tiết để tạo tài khoản mới."
-              : "Cập nhật thông tin tài khoản người dùng."}
-          </p>
-        </div>
-      </div>
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row gap-10 lg:gap-14"
+        requiredMark={false}
+      >
+        {/* Hidden field để lưu URL avatar */}
+        <Form.Item name="avatar" hidden>
+          <Input />
+        </Form.Item>
 
-      {/* --- FORM CONTAINER --- */}
-      <div className="bg-white border border-slate-200 shadow-sm rounded-2xl flex-1 overflow-hidden flex flex-col">
-        <div className="p-6 md:p-10 overflow-y-auto flex-1 flex flex-col items-center">
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={onFinish}
-            initialValues={{ role: "tenant" }}
-            className="w-full max-w-6xl mx-auto flex flex-col lg:flex-row gap-10 lg:gap-14"
-            requiredMark={false} // Ẩn dấu hoa thị đỏ mặc định của Antd
-          >
-            <Form.Item name="avatar" hidden>
-              <Input />
-            </Form.Item>
-            {/* ================= CỘT TRÁI: AVATAR ================= */}
-            <div className="w-full md:w-64 shrink-0 flex flex-col items-center">
-              <div className="w-full bg-slate-50 rounded-2xl border border-slate-200 p-6 flex flex-col items-center text-center">
-                {/* Khu vực ảnh tròn */}
-                <div className="relative group cursor-pointer mb-4">
-                  <img
-                    src={avatarUrl || fallbackAvatar}
-                    alt="Avatar preview"
-                    className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md group-hover:border-emerald-100 transition-colors"
-                  />
-
-                  {/* Lớp phủ Camera khi Hover */}
-                  <Upload
-                    showUploadList={false}
-                    name="file"
-                    accept={allowedExts.join(",")}
-                    beforeUpload={beforeUploadAvatar}
-                    onChange={handleAvatarChange}
-                  >
-                    <div className="w-32 h-32 absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 rounded-full cursor-pointer transition-opacity">
-                      <CameraOutlined className="text-2xl" />
-                    </div>
-                  </Upload>
+        {/* --- CỘT TRÁI: AVATAR --- */}
+        <div className="w-full md:w-64 shrink-0 flex flex-col items-center">
+          <div className="w-full bg-slate-50 rounded-2xl border border-slate-200 p-6 flex flex-col items-center text-center">
+            <div className="relative group cursor-pointer mb-4">
+              <img
+                src={avatarUrl || fallbackAvatar}
+                alt="Avatar preview"
+                className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-md group-hover:border-emerald-100 transition-colors"
+              />
+              <Upload
+                showUploadList={false}
+                accept={allowedExts.join(",")}
+                beforeUpload={beforeUploadAvatar}
+                onChange={handleAvatarChange}
+              >
+                <div className="w-32 h-32 absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 rounded-full cursor-pointer transition-opacity">
+                  <CameraOutlined className="text-2xl" />
                 </div>
-
-                <h3 className="text-sm font-semibold text-slate-800 mb-1">
-                  Ảnh đại diện
-                </h3>
-                <p className="text-xs text-slate-500 mb-5">
-                  JPG, PNG, GIF. Tối đa 2MB.
-                </p>
-
-                {/* Nút thao tác dưới ảnh */}
-                <div className="flex flex-col w-full gap-2.5">
-
-                  {avatarUrl && (
-                    <button
-                      type="button"
-                      onClick={handleDeleteAvatar}
-                      className="inline-flex items-center justify-center w-full px-4 py-2 border border-red-200 rounded-xl text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
-                    >
-                      <DeleteOutlined className="mr-2" /> Xóa ảnh
-                    </button>
-                  )}
-                </div>
-              </div>
+              </Upload>
             </div>
+            <h3 className="text-sm font-semibold text-slate-800 mb-1">Ảnh đại diện</h3>
+            <p className="text-xs text-slate-500 mb-5">JPG, PNG, GIF. Tối đa 2MB.</p>
 
-            {/* ================= CỘT PHẢI: FORM FIELDS ================= */}
-            <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-              {/* --- Cột Thông tin tài khoản --- */}
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-100 pb-2 mb-4">
-                  Thông tin tài khoản
-                </h3>
+            {avatarUrl && (
+              <button
+                type="button"
+                onClick={handleDeleteAvatar}
+                className="inline-flex items-center justify-center w-full px-4 py-2 border border-red-200 rounded-xl text-sm font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+              >
+                <DeleteOutlined className="mr-2" /> Xóa ảnh
+              </button>
+            )}
+          </div>
+        </div>
 
+        {/* --- CỘT PHẢI: THÔNG TIN CHI TIẾT --- */}
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+          {/* Nhóm 1: Tài khoản */}
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-100 pb-2 mb-4">
+              Thông tin tài khoản
+            </h3>
+            <FormField label="Họ và tên" name="fullname" required placeholder="Nguyễn Văn A" />
+            <FormField
+              label="Tên đăng nhập"
+              name="username"
+              required={mode === "add"}
+              disabled={mode !== "add"}
+              placeholder="user123"
+            />
+            {mode === "add" && (
+              <FormField label="Mật khẩu" name="password" type="password" required placeholder="••••••••" />
+            )}
+            <FormField label="Email" name="email" required placeholder="email@example.com" />
+            <FormField label="Số điện thoại" name="phone" placeholder="0901234567" />
+            <FormField
+              label="Vai trò"
+              name="role"
+              type="select"
+              required
+              options={[
+                { label: "Người thuê", value: "tenant" },
+                { label: "Chủ nhà", value: "landlord" },
+                { label: "Quản trị viên", value: "admin" },
+              ]}
+            />
+          </div>
+
+          {/* Nhóm 2: Cá nhân & Địa chỉ */}
+          <div className="space-y-1">
+            <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-100 pb-2 mb-4">
+              Thông tin cá nhân
+            </h3>
+            <FormField label="Ngày sinh" name="dob" type="date" placeholder="Chọn ngày sinh" />
+            <FormField label="CMND/CCCD" name="id_card" placeholder="079..." />
+            
+            <FormField
+              label="Tỉnh/Thành phố"
+              name="province"
+              type="select"
+              placeholder="Chọn Tỉnh/Thành phố"
+              onChange={(value) => {
+                form.setFieldsValue({ ward: undefined });
+                if (typeof onProvinceChange === "function") onProvinceChange(value);
+              }}
+              options={provinces.map((p) => ({
+                label: p.province_name,
+                value: p.province_code,
+              }))}
+            />
+
+            <Form.Item noStyle shouldUpdate={(prev, curr) => prev.province !== curr.province}>
+              {({ getFieldValue }) => (
                 <FormField
-                  label="Họ và tên"
-                  name="fullname"
-                  required
-                  placeholder="Nguyễn Văn A"
-                  rules={[
-                    { min: 2, message: "Họ và tên phải từ 2 ký tự trở lên" },
-                  ]}
-                />
-
-                <FormField
-                  label="Tên đăng nhập"
-                  name="username"
-                  required={mode === "add"}
-                  disabled={mode !== "add"}
-                  placeholder="admin_01"
-                  rules={[
-                    { min: 3, message: "Tên đăng nhập phải từ 3 ký tự trở lên" },
-                    { max: 30, message: "Tên đăng nhập tối đa 30 ký tự" },
-                    {
-                      pattern: /^[a-zA-Z0-9]+$/,
-                      message: "Tên đăng nhập chỉ gồm chữ và số",
-                    },
-                  ]}
-                />
-
-                {mode === "add" && (
-                  <FormField
-                    label="Mật khẩu"
-                    name="password"
-                    type="password"
-                    required
-                    placeholder="••••••••"
-                    rules={[
-                      { min: 6, message: "Mật khẩu phải từ 6 ký tự trở lên" },
-                    ]}
-                  />
-                )}
-
-                <FormField
-                  label="Email"
-                  name="email"
-                  required
-                  placeholder="email@example.com"
-                  rules={[
-                    { type: "email", message: "Email không đúng định dạng!" },
-                  ]}
-                />
-
-                <FormField
-                  label="Số điện thoại"
-                  name="phone"
-                  required={false}
-                  placeholder="0901234567"
-                  rules={[
-                    () => ({
-                      validator(_, value) {
-                        if (value === undefined || value === null || value === "") return Promise.resolve();
-                        const ok = /^(?:\d{10,11})$/.test(String(value));
-                        return ok
-                          ? Promise.resolve()
-                          : Promise.reject(new Error("Số điện thoại phải gồm 10-11 chữ số"));
-                      },
-                    }),
-                  ]}
-                />
-
-                <FormField
-                  label="Vai trò"
-                  name="role"
+                  label="Phường/Xã"
+                  name="ward"
                   type="select"
-                  required
-                  options={[
-                    { label: "Người thuê", value: "tenant" },
-                    { label: "Chủ nhà", value: "landlord" },
-                    { label: "Quản trị viên", value: "admin" },
-                  ]}
-                />
-              </div>
-
-              {/* --- Cột Thông tin cá nhân & Địa chỉ --- */}
-              <div className="space-y-1">
-                <h3 className="text-lg font-semibold text-slate-800 border-b border-slate-100 pb-2 mb-4">
-                  Thông tin cá nhân
-                </h3>
-
-                <FormField
-                  label="Ngày sinh"
-                  name="dob"
-                  type="date"
-                  placeholder="Chọn ngày sinh"
-                />
-
-                <FormField
-                  label="CMND/CCCD"
-                  name="id_card"
-                  placeholder="079..."
-                />
-
-                <FormField
-                  label="Tỉnh/Thành phố"
-                  name="province"
-                  type="select"
-                  placeholder="Chọn Tỉnh/Thành phố"
-                  onChange={(value) => {
-                    form.setFieldsValue({ ward: undefined });
-                    if (typeof onProvinceChange === "function") {
-                      onProvinceChange(value);
-                    }
-                  }}
-                  options={provinces.map((p) => ({
-                    label: p.province_name,
-                    value: p.province_code,
+                  placeholder="Chọn Phường/Xã"
+                  disabled={!getFieldValue("province")}
+                  options={wards.map((w) => ({
+                    label: w.province_name,
+                    value: w.province_code,
                   }))}
                 />
+              )}
+            </Form.Item>
 
-                {/* Logic lấy Quận/Huyện dựa trên Tỉnh đã chọn */}
-                <Form.Item
-                  noStyle
-                  shouldUpdate={(prev, curr) => prev.province !== curr.province}
-                >
-                  {({ getFieldValue }) => {
-                    const selectedProvince = getFieldValue("province");
-                    return (
-                      <FormField
-                        label="Phường/xã"
-                        name="ward"
-                        type="select"
-                        placeholder="Chọn Phường/xã"
-                        disabled={!selectedProvince}
-                        options={wards.map((w) => ({
-                          label: w.province_name,
-                          value: w.province_code,
-                        }))}
-                      />
-                    );
-                  }}
-                </Form.Item>
-
-                <FormField
-                  label="Địa chỉ chi tiết"
-                  name="address"
-                  placeholder="Số nhà, tên đường..."
-                />
-              </div>
-            </div>
-          </Form>
+            <FormField label="Địa chỉ chi tiết" name="address" placeholder="Số nhà, tên đường..." />
+          </div>
         </div>
-
-        {/* --- FOOTER ACTIONS --- */}
-        <div className="px-6 md:px-8 py-5 border-t border-slate-200 bg-slate-50 flex justify-end space-x-4 shrink-0">
-          <AppButton variant="outline" onClick={onCancel}>
-            Hủy bỏ
-          </AppButton>
-
-          <AppButton variant="primary" onClick={() => form.submit()}>
-            {mode === "add" ? "Tạo người dùng" : "Lưu thay đổi"}
-          </AppButton>
-        </div>
-      </div>
-    </MotionDiv>
+      </Form>
+    </EntityFormShell>
   );
 }

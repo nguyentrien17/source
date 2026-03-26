@@ -107,10 +107,7 @@ async function start() {
   app.use('/api', apiLimiter);
   app.use('/api/auth/login', loginLimiter);
 
-  // Import routes
-  const authRoutes = require('./routes/authRoutes');
-  app.use('/api/auth', authRoutes);
-
+  // Import tất cả routes qua routes/index.js
   const routes = require('./routes/index');
   app.use('/api', routes);
 
