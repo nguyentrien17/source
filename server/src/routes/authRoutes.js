@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const auth = require('../middlewares/auth'); // Middleware xác thực JWT & Check Role
-const validate = require('../middlewares/validate.middleware'); // Middleware chặn dữ liệu lỗi
-const userSchemas = require('../validations/user.validation'); // Quy tắc Joi
+const auth = require('../middlewares/auth');
+const validate = require('../middlewares/validate.middleware');
+const userSchemas = require('../validations/user.validation');
 const authSchemas = require('../validations/auth.validation');
 const commonSchemas = require('../validations/common.validation');
 const { uploadAvatar } = require('../middlewares/uploadAvatar.middleware');
@@ -32,8 +32,8 @@ router.post(
         return res.status(422).json({
           success: false,
           code: 'VALIDATION_ERROR',
-          message: 'File ảnh quá lớn (tối đa 2MB)',
-          errors: { file: ['File ảnh quá lớn (tối đa 2MB)'] },
+          message: 'File ảnh quá lớn (tối đa 5MB)',
+          errors: { file: ['File ảnh quá lớn (tối đa 5MB)'] },
           status: 422,
         });
       }

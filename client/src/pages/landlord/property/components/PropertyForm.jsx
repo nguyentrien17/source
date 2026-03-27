@@ -35,21 +35,28 @@ export default function PropertyForm({
 
   useEffect(() => {
     if (initialData) {
-      const urls = initialData.images || [];
+      const { location, ...rest } = initialData;
+      let rawCoordinate = "";
+      if (location) {
+        try {
+          const locObj = typeof location === "string" ? JSON.parse(location) : location;
+          if (locObj.lat && locObj.lng) {
+            rawCoordinate = `${locObj.lat}, ${locObj.lng}`;
+          }
+        } catch {}
+      }
+      const urls = rest.images || [];
       form.setFieldsValue({
-        ...initialData,
-        rawCoordinate:
-          initialData.latitude && initialData.longitude
-            ? `${initialData.latitude}, ${initialData.longitude}`
-            : "",
+        ...rest,
+        rawCoordinate,
         images: urlsToAntdFileList(urls, "init"),
       });
       // Ask parent to prefill wards list if editing existing data
       if (
         typeof onProvinceChange === "function" &&
-        (initialData?.province_code || initialData?.province)
+        (rest?.province_code || rest?.province)
       ) {
-        const parentCode = initialData.province_code || initialData.province;
+        const parentCode = rest.province_code || rest.province;
         onProvinceChange(parentCode);
       }
     } else {

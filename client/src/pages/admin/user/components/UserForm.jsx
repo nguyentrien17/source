@@ -47,7 +47,7 @@ export default function UserForm({
       return Upload.LIST_IGNORE;
     }
 
-    const isLt2M = file.size / 1024 / 1024 <= 2;
+    const isLt2M = file.size / 1024 / 1024 <= 5;
     if (!isLt2M) {
       message.error("Ảnh quá lớn (tối đa 2MB)");
       return Upload.LIST_IGNORE;

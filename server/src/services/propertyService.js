@@ -45,6 +45,51 @@ const getAllProperties = async ({
   };
 };
 
+
+/**
+ * Thêm mới một khu trọ
+ * @param {Object} propertyData - Dữ liệu khu trọ
+ * @returns {Promise<Object>} - Đối tượng property vừa tạo
+ */
+const addProperty = async (propertyData) => {
+  // Tự động set created_at, updated_at nếu chưa có
+  if (!propertyData.created_at) propertyData.created_at = new Date();
+  if (!propertyData.updated_at) propertyData.updated_at = new Date();
+  // Nếu location là object, stringify để lưu vào TEXT
+  if (propertyData.location && typeof propertyData.location === 'object') {
+    propertyData.location = JSON.stringify(propertyData.location);
+  }
+  const property = await Property.create(propertyData);
+  // Trả về location là object nếu có
+  if (property.location) {
+    try {
+      property.location = JSON.parse(property.location);
+    } catch {}
+  }
+  return property;
+};
+
+/**
+ * Lấy khu trọ theo id
+ * @param {number|string} id
+ * @returns {Promise<Object|null>}
+ */
+const getPropertyById = async (id) => {
+  const property = await Property.findByPk(id);
+  if (!property) return null;
+  let result = property.toJSON ? property.toJSON() : { ...property };
+  if (result.location) {
+    try {
+      const loc = JSON.parse(result.location);
+      result.latitude = loc.lat;
+      result.longitude = loc.lng;
+    } catch {}
+  }
+  return result;
+};
+
 module.exports = {
   getAllProperties,
+  addProperty,
+  getPropertyById,
 };

@@ -27,9 +27,25 @@ export default function PropertyManager() {
   const propertyId = searchParams.get("id");
 
   // Xác định property đang được chọn dựa trên ID từ URL
-  const selectedProperty = useMemo(() => {
-    return properties.find((p) => String(p.id) === String(propertyId)) || null;
-  }, [properties, propertyId]);
+  const [selectedProperty, setSelectedProperty] = useState(null);
+
+  useEffect(() => {
+    if (view === "edit" && propertyId) {
+      (async () => {
+        try {
+          const res = await api.get(`/properties/${propertyId}`);
+          console.log(res);
+          
+          setSelectedProperty(res?.data?.data || null);
+        } catch (err) {
+          setSelectedProperty(null);
+          message.error(getApiErrorMessage(err));
+        }
+      })();
+    } else {
+      setSelectedProperty(null);
+    }
+  }, [view, propertyId]);
 
   const loadProperties = useCallback(async () => {
     try {
@@ -50,6 +66,8 @@ export default function PropertyManager() {
   useEffect(() => {
     if (selectedProperty?.province_code) {
       handleProvinceChange(selectedProperty.province_code);
+    } else if (selectedProperty?.province) {
+      handleProvinceChange(selectedProperty.province);
     }
   }, [selectedProperty]);
 
@@ -89,19 +107,19 @@ export default function PropertyManager() {
   const handleSubmitProperty = async (values) => {
     console.log(values);
     
-    // try {
-    //   if (view === "edit" && propertyId) {
-    //     await api.put(`/properties/${propertyId}`, values);
-    //     message.success("Cập nhật khu trọ thành công");
-    //   } else {
-    //     await api.post("/properties", values);
-    //     message.success("Thêm khu trọ thành công");
-    //   }
-    //   handleBack();
-    //   await loadProperties();
-    // } catch (err) {
-    //   message.error(getApiErrorMessage(err));
-    // }
+    try {
+      if (view === "edit" && propertyId) {
+        await api.put(`/properties/${propertyId}`, values);
+        message.success("Cập nhật khu trọ thành công");
+      } else {
+        await api.post("/properties", values);
+        message.success("Thêm khu trọ thành công");
+      }
+      handleBack();
+      await loadProperties();
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
+    }
   };
 
   const handleManageRooms = (prop) => {
@@ -120,11 +138,9 @@ export default function PropertyManager() {
           handleManageRooms={handleManageRooms}
         />
       )}
-
-      {/* Nếu view là add hoặc edit thì hiện Form */}
       {(view === "add" || view === "edit") && (
         <PropertyForm
-          initialData={selectedProperty}
+          initialData={view === "edit" ? selectedProperty : null}
           onBack={handleBack}
           onSubmit={handleSubmitProperty}
           provinces={provinces}

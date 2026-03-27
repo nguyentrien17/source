@@ -7,7 +7,7 @@ const Property = sequelize.define("Property", {
   province: { type: DataTypes.STRING(100), allowNull: false },
   ward: { type: DataTypes.STRING(100), allowNull: false },
   address: { type: DataTypes.TEXT, allowNull: false },
-  location: { type: DataTypes.GEOMETRY("POINT", 4326), allowNull: true },
+  location: { type: DataTypes.TEXT("long"), allowNull: true },
   status: { type: DataTypes.ENUM("active", "maintenance", "inactive"), allowNull: false, defaultValue: "active" },
   description: { type: DataTypes.TEXT, allowNull: true },
   images: { type: DataTypes.JSON, allowNull: true, defaultValue: [] },
