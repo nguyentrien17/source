@@ -104,8 +104,18 @@ export default function UserManagement() {
   };
 
   const handleDeleteConfirm = async (userId) => {
-    console.log(userId);
-    // Code API xóa user
+    setLoading(true);
+    try {
+      const res = await api.delete(`/auth/users/${userId}`);
+      if (res.data?.success) {
+        message.success("Đã xóa người dùng!");
+        fetchUsers();
+      }
+    } catch {
+      message.error("Xóa người dùng thất bại!");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSaveForm = async (userData, setFormErrors) => {
