@@ -20,7 +20,6 @@ const schemas = {
     id_card: Joi.string().allow(null, '')
   }),
 
-  // Quy tắc khi Cập nhật (Tất cả là optional nhưng nếu gửi thì phải đúng định dạng)
   update: Joi.object({
     fullname: Joi.string().min(2),
     email: Joi.string().email(),
@@ -33,7 +32,7 @@ const schemas = {
     address: Joi.string().allow(null, ''),
     avatar: Joi.string().allow(null, ''),
     id_card: Joi.string().allow(null, '')
-  }).min(1) // Phải có ít nhất 1 trường được gửi lên
+  }).min(1)
 };
 
 module.exports = schemas;

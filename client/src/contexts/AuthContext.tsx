@@ -17,7 +17,6 @@ export interface LoginCredentials {
   password: string;
 }
 
-
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
@@ -36,30 +35,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
-  const hasCookie = (name: string) => {
-    try {
-      return document.cookie.split(';').some((p) => p.trim().startsWith(`${name}=`));
-    } catch {
-      return false;
-    }
-  };
-
   useEffect(() => {
     let cancelled = false;
 
     const initAuth = async () => {
       try {
-        // If there's no CSRF cookie, we can safely assume there's no active session.
-        // (We issue csrf_token only on successful login.)
-        if (!hasCookie('csrf_token')) {
-          if (!cancelled) setUser(null);
-          return;
-        }
-
+        // Luôn gọi API check me khi khởi tạo để xác thực từ phía Server
         const res = await api.get('/auth/me');
         const apiUser = res?.data?.user as User | undefined;
         if (!cancelled) setUser(apiUser || null);
-      } catch {
+      } catch (error) {
         if (!cancelled) setUser(null);
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -67,16 +52,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     initAuth();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, []);
 
-  const logout = useCallback(() => {
-    // Fire-and-forget logout; CSRF header will be added by axios interceptor
-    api.post('/auth/logout').catch(() => {});
-    setUser(null);
+  const logout = useCallback(async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error("Logout error", error);
+    } finally {
+      setUser(null);
+    }
   }, []);
 
   const login = useCallback(async (credentials: LoginCredentials) => {
@@ -88,17 +74,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(apiUser);
       return true;
     } catch (error) {
-      if (isAxiosError(error) && error.response) {
-        // Sai credentials / dữ liệu thiếu: trả về false để UI hiển thị "Sai tài khoản/mật khẩu"
-        if (error.response.status === 401) {
-          return false;
-        }
-        // Lỗi validate (422) cần để UI map lỗi theo field
-        if (error.response.status === 422) {
-          throw error;
-        }
+      if (isAxiosError(error) && error.response?.status === 401) {
+        return false;
       }
-      // Lỗi mạng/500: để UI bắt và hiển thị thông báo lỗi kết nối
       throw error;
     }
   }, []);
@@ -119,8 +97,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
+  if (!context) throw new Error("useAuth must be used within an AuthProvider");
   return context;
 }

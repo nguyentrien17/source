@@ -227,7 +227,7 @@ exports.createUser = async (req, res) => {
   try {
     // Nếu có file ảnh upload, gán path vào body để service lưu vào DB
     if (req.file) {
-      req.body.avatar = `/uploads/avatars/${req.file.filename}`;
+      req.body.avatar = `/uploads/images/avatars/${req.file.filename}`;
     }
 
     // Kiểm tra trùng username qua service

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom"; // Thêm useSearchParams
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { message } from "antd";
 import PropertyList from "./components/PropertyList";
 import PropertyForm from "./components/PropertyForm";
@@ -22,11 +22,9 @@ export default function PropertyManager() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Đọc trạng thái từ URL
-  const view = searchParams.get("view"); // 'add' hoặc 'edit'
+  const view = searchParams.get("view");
   const propertyId = searchParams.get("id");
 
-  // Xác định property đang được chọn dựa trên ID từ URL
   const [selectedProperty, setSelectedProperty] = useState(null);
 
   useEffect(() => {
@@ -80,8 +78,6 @@ export default function PropertyManager() {
     setWards(wardsData);
   }, []);
 
-  // --- ĐIỀU HƯỚNG BẰNG URL ---
-
   const handleAddClick = () => {
     setSearchParams({ view: "add" });
   };
@@ -91,7 +87,7 @@ export default function PropertyManager() {
   };
 
   const handleBack = () => {
-    setSearchParams({}); // Xóa các param để về danh sách
+    setSearchParams({});
   };
 
   const handleDeleteProperty = async (id) => {
@@ -128,7 +124,6 @@ export default function PropertyManager() {
 
   return (
     <div className="h-full min-h-0">
-      {/* Nếu không có view thì hiện List */}
       {!view && (
         <PropertyList
           data={properties}

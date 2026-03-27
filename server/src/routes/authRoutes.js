@@ -1,12 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
-const auth = require('../middlewares/auth');
+const { authenticate, authorize } = require('../middlewares/auth');
 const validate = require('../middlewares/validate.middleware');
 const userSchemas = require('../validations/user.validation');
 const authSchemas = require('../validations/auth.validation');
 const commonSchemas = require('../validations/common.validation');
-const { uploadAvatar } = require('../middlewares/uploadAvatar.middleware');
+
+// Import uploader dùng chung
+const createUploader = require('../middlewares/upload.middleware');
+const uploadAvatar = createUploader('avatars'); // Lưu vào uploads/images/avatars
 
 // --- PUBLIC ROUTES ---
 router.post(
@@ -17,88 +20,67 @@ router.post(
 
 router.post('/logout', userController.logout);
 
-router.get('/me', auth(), userController.me);
+router.get('/me', authenticate, userController.me);
 
-// Upload avatar (ADMIN)
-router.post(
-  '/users/upload-avatar',
-  auth(['admin']),
-  (req, res, next) => {
-    uploadAvatar.single('file')(req, res, (err) => {
-      if (!err) return next();
+// router.post(
+//   '/users/upload-avatar',
+//   authenticate,
+//   authorize('admin'),
+//   uploadAvatar.single('file'),
+//   (req, res) => {
+//     if (!req.file) {
+//       return res.status(422).json({
+//         success: false,
+//         message: 'Thiếu file ảnh',
+//         status: 422,
+//       });
+//     }
+//     const url = `/uploads/avatars/${req.file.filename}`;
+//     res.json({ success: true, url, status: 200 });
+//   }
+// );
 
-      // Multer error (e.g., file too large)
-      if (err && err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(422).json({
-          success: false,
-          code: 'VALIDATION_ERROR',
-          message: 'File ảnh quá lớn (tối đa 5MB)',
-          errors: { file: ['File ảnh quá lớn (tối đa 5MB)'] },
-          status: 422,
-        });
-      }
-
-      const status = err.status || 422;
-      return res.status(status).json({
-        success: false,
-        code: 'VALIDATION_ERROR',
-        message: err.message || 'File không hợp lệ',
-        errors: { file: [err.message || 'File không hợp lệ'] },
-        status,
-      });
-    });
-  },
-  (req, res) => {
-    if (!req.file) {
-      return res.status(422).json({
-        success: false,
-        code: 'VALIDATION_ERROR',
-        message: 'Thiếu file ảnh',
-        errors: { file: ['Thiếu file ảnh'] },
-        status: 422,
-      });
-    }
-
-    const url = `/uploads/avatars/${req.file.filename}`;
-    res.json({ success: true, url, status: 200 });
-  }
-);
-
-// --- PRIVATE ROUTES (ADMIN ONLY) ---
-// Thứ tự: Check Login & Role -> Validate dữ liệu -> Thực hiện nghiệp vụ
+// 2. Quản lý danh sách người dùng
 router.get(
   '/users', 
-  auth(['admin']), 
+  authenticate,
+  authorize('admin'), 
   validate({ query: commonSchemas.usersQuery }),
   userController.getAllUsers
 );
 
+// 3. Tạo người dùng mới kèm avatar
 router.post(
   '/users', 
-  auth(['admin']), 
+  authenticate,
+  authorize('admin'), 
   uploadAvatar.single('avatar'),
-  validate(userSchemas.create), // Chặn dữ liệu sai trước khi tạo
+  validate(userSchemas.create), 
   userController.createUser
 );
 
+// 4. Lấy chi tiết, Cập nhật, Xóa
 router.get(
   '/users/:id', 
-  auth(['admin']), 
+  authenticate,
+  authorize('admin'), 
   validate({ params: commonSchemas.idParam }),
   userController.getUserById
 );
 
 router.put(
   '/users/:id', 
-  auth(['admin']), 
+  authenticate,
+  authorize('admin'), 
   uploadAvatar.single('avatar'),
-  validate({ params: commonSchemas.idParam, body: userSchemas.update }), // Chặn dữ liệu sai trước khi cập nhật
+  validate({ params: commonSchemas.idParam, body: userSchemas.update }),
   userController.updateUser
 );
 
 router.delete(
   '/users/:id', 
-  auth(['admin']), 
+  authenticate,
+  authorize('admin'), 
   validate({ params: commonSchemas.idParam }),
   userController.deleteUser
 );
